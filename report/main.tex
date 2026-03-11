@@ -1,0 +1,254 @@
+%%%%%%%% CS6140 FINAL PROJECT REPORT — ICML 2026 FORMAT %%%%%%%%
+%
+% SETUP: Download icml2026.sty from the official ICML 2026 style files:
+%   https://media.icml.cc/Conferences/ICML2026/Styles/icml2026.zip
+% Extract and place icml2026.sty (and fancyhdr.sty if needed) in the
+% same directory as this file.
+%
+% This template is adapted from the ICML 2026 example paper for use as
+% a CS6140 Machine Learning course project report. The double-blind
+% requirement has been removed (we use the [accepted] option).
+%
+% COMPILATION: Use pdflatex + bibtex, or set Overleaf to use pdfLaTeX.
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended packages
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfig}
+\usepackage{booktabs}       % For professional tables
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{hyperref}
+
+% Use [accepted] to show author names (this is a course project, not blind review)
+\usepackage[accepted]{icml2026}
+
+% Optional: additional packages you may find useful
+% \usepackage{algorithm}
+% \usepackage{algorithmic}
+% \usepackage{listings}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% FILL IN YOUR DETAILS BELOW
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\icmltitlerunning{CS6140 Final Project — Your Short Title Here}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Your Project Title Here}
+
+% List all team members. Add or remove \icmlauthor blocks as needed.
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Team Member 1}{neu}
+\icmlauthor{Team Member 2}{neu}
+\icmlauthor{Team Member 3}{neu}
+\end{icmlauthorlist}
+
+\icmlaffiliation{neu}{Khoury College of Computer Sciences, Northeastern University, Portland, ME}
+
+\icmlcorrespondingauthor{Team Member 1}{lastname.f@northeastern.edu}
+
+\icmlkeywords{Machine Learning, CS6140}
+
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% ABSTRACT
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+% Write a 150–250 word summary of your project. Include:
+% - The problem you are solving
+% - Your approach (baseline + advanced model)
+% - Key results
+% - Main takeaway
+%
+% TIP: Write this last, after all other sections are complete.
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 1. INTRODUCTION — due with Update 1 (Literature Review)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{sec:introduction}
+
+% Describe the problem you are trying to solve.
+% - Use formal language to define the inputs and outputs.
+% - Why does this problem matter? Who benefits from a solution?
+% - What makes this problem challenging?
+% - Briefly preview your approach and results.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 2. RELATED WORK — due with Update 1 (Literature Review)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Related Work}
+\label{sec:related-work}
+
+% Survey the relevant literature (aim for 8–15 references).
+% - What methods have others used for this or similar problems?
+% - What are the strengths and limitations of prior approaches?
+% - How does your work differ from or build on existing work?
+%
+% TIP: Organize by theme or method family, not as a list of paper summaries.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 3. DATA — due with Update 2 (Data & Methodology)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Data}
+\label{sec:data}
+
+% Provide a formal definition of your dataset:
+% - Source and how it was collected
+% - Size (number of samples, features)
+% - Feature descriptions and types
+% - Distribution of the target variable
+% - Missingness and how you handle it
+% - Train/validation/test split strategy
+% - Any preprocessing or feature engineering steps
+
+% Include at least one table or figure summarizing the data.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 4. METHODS — due with Update 2 (Data & Methodology)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Methods}
+\label{sec:methods}
+
+% Describe each model you use, with relevant mathematical formulations.
+
+\subsection{Evaluation Metrics}
+\label{sec:metrics}
+
+% Define and motivate the evaluation metrics you will use.
+% - Why are these metrics appropriate for your problem?
+% - Are there trade-offs between metrics (e.g., precision vs. recall)?
+
+\subsection{Baseline Model}
+\label{sec:baseline}
+
+% Describe your simple baseline model.
+% REQUIREMENT: Must be trainable with scikit-learn.
+% - What is the model and why did you choose it?
+% - Mathematical formulation (e.g., objective function)
+% - Key hyperparameters
+
+\subsection{Advanced Model}
+\label{sec:advanced}
+
+% Describe your more complex model.
+% REQUIREMENT: Must use deep learning, ensembling, transfer learning,
+% or another advanced technique.
+% - Architecture or algorithm description
+% - Mathematical formulation where appropriate
+% - Key hyperparameters
+
+\subsection{Training Procedure}
+\label{sec:training}
+
+% Describe your training and validation procedure:
+% - Optimization method (SGD, Adam, etc.)
+% - Hyperparameter tuning method (grid search, random search, Optuna, etc.)
+% - Cross-validation strategy
+% - Hardware used (Colab GPU, etc.)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 5. RESULTS — due with Update 3 (Baseline Results) and Final
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Results}
+\label{sec:results}
+
+% Present your results clearly using tables and/or figures.
+% - Compare baseline and advanced model performance
+% - Report results on your defined evaluation metrics
+% - Include error bars or confidence intervals where possible
+% - Highlight key findings
+
+% Example results table (uncomment and modify):
+% \begin{table}[h]
+% \caption{Model performance comparison on the test set.}
+% \label{tab:results}
+% \centering
+% \begin{tabular}{lcc}
+% \toprule
+% Model & Accuracy & F1 Score \\
+% \midrule
+% Baseline (Logistic Regression) & 0.XX & 0.XX \\
+% Advanced (Your Model) & 0.XX & 0.XX \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 6. DISCUSSION — due with Final Report
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Discussion}
+\label{sec:discussion}
+
+% Interpret your results:
+% - Why does the advanced model outperform (or not) the baseline?
+% - What did you learn from the experiments?
+% - Error analysis: where does your model fail and why?
+
+\subsection{Limitations}
+\label{sec:limitations}
+
+% Be honest about the limitations of your approach:
+% - Data limitations (size, bias, representativeness)
+% - Model limitations (assumptions, scalability)
+% - Evaluation limitations
+
+\subsection{Ethical Considerations}
+\label{sec:ethics}
+
+% Discuss potential ethical implications:
+% - Could your model cause harm if deployed?
+% - Are there fairness or bias concerns in the data or predictions?
+% - Privacy considerations?
+% - How could these risks be mitigated?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% 7. CONCLUSION — due with Final Report
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+% Summarize your contributions:
+% - What problem did you address?
+% - What were the key findings?
+% - What would you do differently or next with more time?
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REFERENCES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliography{references}
+\bibliographystyle{icml2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% APPENDIX (optional — does not count toward page limit)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \appendix
+% \section{Additional Figures}
+% \section{Hyperparameter Search Details}
+
+\end{document}
