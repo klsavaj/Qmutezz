@@ -147,23 +147,23 @@ From these trips, we simulate a P2P marketplace: 50\% of commute-window (7--10~A
 \paragraph{Features.}
 Table~\ref{tab:features} describes the 5 input features and 2 prediction targets.
 
-\begin{table}[h]
-\caption{Feature definitions for each candidate driver--rider pair.}
+\begin{table}[t]
+\caption{Feature definitions for each candidate pair.}
 \label{tab:features}
 \centering
-\small
-\begin{tabular}{lll}
+\footnotesize
+\begin{tabular}{@{}llp{3.2cm}@{}}
 \toprule
 Feature & Type & Description \\
 \midrule
-\texttt{driver\_orig\_dist} & float & Driver's solo trip distance (km) \\
-\texttt{overlap\_ratio} & float & Route overlap $\in [0, 1]$ \\
-\texttt{time\_diff\_mins} & float & $|\text{pickup}_d - \text{pickup}_r|$ in min \\
-\texttt{driver\_approx\_fare} & float & Driver's taxi meter fare (\$) \\
-\texttt{rider\_approx\_fare} & float & Rider's taxi meter fare (\$) \\
+driver\_orig\_dist & float & Driver's solo trip (km) \\
+overlap\_ratio & float & Route overlap $\in [0,1]$ \\
+time\_diff\_mins & float & Pickup time gap (min) \\
+driver\_approx\_fare & float & Driver fare (\$) \\
+rider\_approx\_fare & float & Rider fare (\$) \\
 \midrule
-\texttt{detour\_distance\_km} & float & Regression target (km) \\
-\texttt{label} & binary & Classification target (1=accept) \\
+detour\_distance\_km & float & Regression target (km) \\
+label & binary & Accept/reject (1/0) \\
 \bottomrule
 \end{tabular}
 \end{table}
