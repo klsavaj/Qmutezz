@@ -82,14 +82,14 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Urban commuting accounts for a significant share of daily vehicle miles traveled in the United States, yet the average private car carries only 1.08 occupants during peak hours~\citep{santos2011summary}. The math is simple: if even a fraction of those solo commuters shared rides with someone heading the same direction, the impact on congestion, cost, and emissions would be substantial --- and it requires zero new infrastructure.
+Urban commuting accounts for a significant share of daily vehicle miles traveled in the United States, yet the average private car carries only 1.08 occupants during peak hours~\citep{santos2011summary}. The math is simple: if even a fraction of those solo commuters shared rides with someone heading the same direction, the impact on congestion, cost, and emissions would be substantial, and it requires zero new infrastructure.
 
 Platforms like Uber and Lyft already offer pooled rides, but their matching algorithms are built around professional drivers who accept any profitable trip. Peer-to-peer (P2P) carpooling between regular commuters is a fundamentally different problem. These are people with fixed routes, fixed schedules, and limited tolerance for detours. A commuter who drives from the Bronx to Midtown every morning at 8:15~AM is not going to accept a 6~km detour to pick up a stranger unless the economics make sense.
 
 \paragraph{The Learning Problem.}
 We frame this as a supervised prediction task followed by combinatorial optimization. Given a set of $n$ drivers $\mathcal{D} = \{d_1, \ldots, d_n\}$ and $m$ riders $\mathcal{R} = \{r_1, \ldots, r_m\}$, each defined by an origin--destination coordinate pair, pickup time, and fare, we construct a candidate pair $(d_i, r_j)$ whenever the geodesic distance between their origins falls within a configurable spatial threshold $\delta_{\text{max}}$.
 
-For each candidate pair, we engineer a feature vector $\mathbf{x}_{ij} \in \mathbb{R}^6$ capturing route overlap, detour cost, temporal compatibility, and economic incentives. The prediction task has two objectives:
+For each candidate pair, we engineer a feature vector $\mathbf{x}_{ij} \in \mathbb{R}^5$ capturing route overlap, detour cost, temporal compatibility, and economic incentives. The prediction task has two objectives:
 \begin{enumerate}
     \item \textbf{Regression:} Predict the additional detour $\hat{y}^{\text{det}}_{ij} \in \mathbb{R}^+$ the driver would incur.
     \item \textbf{Classification:} Predict the probability $\hat{y}^{\text{acc}}_{ij} \in [0, 1]$ that the driver accepts the match.
@@ -97,7 +97,7 @@ For each candidate pair, we engineer a feature vector $\mathbf{x}_{ij} \in \math
 These dual predictions are fused into a composite match score $s_{ij} = \hat{y}^{\text{acc}}_{ij} - \lambda \cdot \hat{y}^{\text{det}}_{ij}$, where $\lambda$ controls the detour penalty. At inference time, the scores serve as edge weights in a bipartite graph $G = (\mathcal{D}, \mathcal{R}, E)$, and we solve for the maximum-weight matching to produce globally optimal one-to-one assignments.
 
 \paragraph{Why This is Hard.}
-This problem is hard for a few reasons. No public P2P carpooling dataset exists --- real matching data is proprietary (Uber, Waze), so we have to construct a simulation pipeline that synthesizes labeled training pairs from 3.5 million single-passenger NYC taxi trips. The acceptance decision itself is inherently multi-factor: a driver's willingness depends on the interaction between detour severity, fare compensation, timing, and the detour-to-trip-length ratio, not any single threshold. And even with good pairwise predictions, greedy assignment does not guarantee a good global outcome --- a locally attractive match can block a better pairing downstream.
+This problem is hard for a few reasons. No public P2P carpooling dataset exists. Real matching data is proprietary (Uber, Waze), so we have to construct a simulation pipeline that synthesizes labeled training pairs from 3.5 million single-passenger NYC taxi trips. The acceptance decision itself is inherently multi-factor: a driver's willingness depends on the interaction between detour severity, fare compensation, timing, and the detour-to-trip-length ratio, not any single threshold. And even with good pairwise predictions, greedy assignment does not guarantee a good global outcome. A locally attractive match can block a better pairing downstream.
 
 \paragraph{Our Approach.}
 Our pipeline has three stages: (1) a data synthesis engine that generates geographically realistic driver--rider pairs from public taxi records using corridor-aware coordinate projection and multi-factor stochastic labeling, (2) a dual-objective XGBoost model~\citep{chen2016xgboost} that simultaneously predicts detour cost and acceptance probability, and (3) a bipartite matching layer~\citep{kuhn1955hungarian} that selects globally optimal assignments using the predicted scores as edge weights. This architecture follows the learning-augmented matching paradigm~\citep{bjorck2021learning}, which provably outperforms either pure heuristic matching or pure ML prediction alone.
@@ -109,16 +109,16 @@ Our pipeline has three stages: (1) a data synthesis engine that generates geogra
 \section{Related Work}
 \label{sec:related-work}
 
-Ride-sharing optimization has been studied from several angles --- shareability analysis, matching algorithms, trajectory-based routing, and multi-objective formulations. We review each below.
+Ride-sharing optimization has been studied from several angles: shareability analysis, matching algorithms, trajectory-based routing, and multi-objective formulations. We review each below.
 
 \paragraph{Shareability Networks and Fleet Optimization.}
-The foundational work of \citet{santi2014quantifying} introduced \emph{shareability networks}, modeling every NYC taxi trip as a node and connecting shareable trips with edges. By solving bipartite matching on this graph, they showed that ride-sharing could reduce the taxi fleet by 40\% with minimal passenger delay. Their approach relies entirely on fixed spatiotemporal thresholds to determine shareability --- if two trips can be combined within a delay budget, they are connected. While powerful for fleet-level analysis, this binary threshold ignores the nuance of \emph{individual} willingness: a 3~km detour is acceptable on a 30~km highway commute but painful on a 5~km city trip. Our work builds directly on their graph formulation but replaces the fixed threshold with a learned acceptance model that captures these non-linear trade-offs.
+The foundational work of \citet{santi2014quantifying} introduced \emph{shareability networks}, modeling every NYC taxi trip as a node and connecting shareable trips with edges. By solving bipartite matching on this graph, they showed that ride-sharing could reduce the taxi fleet by 40\% with minimal passenger delay. Their approach relies entirely on fixed spatiotemporal thresholds to determine shareability: if two trips can be combined within a delay budget, they are connected. While powerful for fleet-level analysis, this binary threshold ignores the nuance of \emph{individual} willingness: a 3~km detour is acceptable on a 30~km highway commute but painful on a 5~km city trip. Our work builds directly on their graph formulation but replaces the fixed threshold with a learned acceptance model that captures these non-linear trade-offs.
 
 \paragraph{Matching with Learned Predictions.}
 \citet{bjorck2021learning} formalized the concept of \emph{learning-augmented matching}, proving that using ML predictions as edge weights in bipartite optimization provably outperforms both pure heuristic matching and pure ML prediction used in isolation. Their theoretical guarantees show that even when predictions are imperfect, the matching quality degrades gracefully (never worse than 2$\times$ optimal). They validate on taxi-rider matching with uncertain trip duration. Our pipeline directly instantiates this paradigm: XGBoost generates match scores, and maximum-weight bipartite matching~\citep{kuhn1955hungarian} selects globally optimal assignments at inference time.
 
 \paragraph{Spatial and Temporal Pre-filtering.}
-Efficient candidate generation is critical at scale. Brute-force comparison of all driver--rider pairs is $O(n^2)$ and infeasible for large networks. \citet{anagnostopoulos2025vehicle} address this with a three-dimensional matching framework incorporating spatial, temporal, and social behavior similarity, tested on Athens taxi data. Their social dimension --- modeling whether passengers have compatible travel habits --- is particularly relevant for P2P settings with repeat commuters. We adopt a similar spatial and temporal pre-filtering strategy, using BallTree indexing with the Haversine metric~\citep{omohundro1989five} for $O(\log n)$ neighbor queries within configurable geodesic radii, combined with rolling temporal batch windows.
+Efficient candidate generation is critical at scale. Brute-force comparison of all driver--rider pairs is $O(n^2)$ and infeasible for large networks. \citet{anagnostopoulos2025vehicle} address this with a three-dimensional matching framework incorporating spatial, temporal, and social behavior similarity, tested on Athens taxi data. Their social dimension (modeling whether passengers have compatible travel habits) is particularly relevant for P2P settings with repeat commuters. We adopt a similar spatial and temporal pre-filtering strategy, using BallTree indexing with the Haversine metric~\citep{omohundro1989five} for $O(\log n)$ neighbor queries within configurable geodesic radii, combined with rolling temporal batch windows.
 
 \paragraph{Trajectory-Based Routing.}
 \citet{hsieh2017car} proposed matching based on full GPS trajectories rather than origin--destination points, integrating Google Maps API for real road-network distances. This captures critical routing details that straight-line (geodesic) distance misses: a rider 3~km away across a river with no bridge requires a 20-minute detour, while one 3~km down the highway requires 30 seconds. Our current implementation uses geodesic distance via \texttt{geopy}~\citep{geopy}, which is a known limitation. However, for commuter corridors where routes are predominantly highway-based, the geodesic approximation is reasonable, and we discuss OSRM integration as future work.
@@ -139,16 +139,50 @@ While shareability networks~\citep{santi2014quantifying} and learning-augmented 
 \section{Data}
 \label{sec:data}
 
-% Provide a formal definition of your dataset:
-% - Source and how it was collected
-% - Size (number of samples, features)
-% - Feature descriptions and types
-% - Distribution of the target variable
-% - Missingness and how you handle it
-% - Train/validation/test split strategy
-% - Any preprocessing or feature engineering steps
+\paragraph{Source and Construction.}
+No public P2P carpooling dataset exists, so we construct one from the NYC Taxi \& Limousine Commission (TLC) Yellow Taxi trip records for August 2025 (3.5 million single-passenger trips). Since the TLC replaced exact GPS coordinates with integer zone IDs (\texttt{PULocationID}) in 2016, we synthesize pickup coordinates via Zonal Bounding Box Distribution over official shapefile polygons with point-in-polygon rejection sampling, and synthesize dropoff coordinates via forward-azimuth spherical projection scaled to the recorded \texttt{trip\_distance}. Details are in our public codebase (\texttt{src/data/loader.py}).
 
-% Include at least one table or figure summarizing the data.
+From these trips, we simulate a P2P marketplace: 50\% of commute-window (7--10~AM) trips are randomly assigned as drivers, 50\% as riders. A BallTree spatial index (Haversine metric, 5~km radius) identifies nearby driver--rider candidates within 5-minute temporal batches. For each feasible pair, we compute 5 engineered features and assign a stochastic acceptance label.
+
+\paragraph{Features.}
+Table~\ref{tab:features} describes the 5 input features and 2 prediction targets.
+
+\begin{table}[h]
+\caption{Feature definitions for each candidate driver--rider pair.}
+\label{tab:features}
+\centering
+\small
+\begin{tabular}{lll}
+\toprule
+Feature & Type & Description \\
+\midrule
+\texttt{driver\_orig\_dist} & float & Driver's solo trip distance (km) \\
+\texttt{overlap\_ratio} & float & Route overlap $\in [0, 1]$ \\
+\texttt{time\_diff\_mins} & float & $|\text{pickup}_d - \text{pickup}_r|$ in min \\
+\texttt{driver\_approx\_fare} & float & Driver's taxi meter fare (\$) \\
+\texttt{rider\_approx\_fare} & float & Rider's taxi meter fare (\$) \\
+\midrule
+\texttt{detour\_distance\_km} & float & Regression target (km) \\
+\texttt{label} & binary & Classification target (1=accept) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Dataset Size and Label Balance.}
+The simulation produces 750 labeled pairs (dev mode, 5\% sample). In production mode (full dataset, 25K driver limit), this scales to $\sim$10K+ pairs. The label split is 43.3\% accepted / 56.7\% rejected, which is roughly balanced and consistent with our 0.45 acceptance threshold plus Gumbel noise. No feature has missing values; all are computed deterministically from the synthesis pipeline.
+
+\paragraph{Train/Test Split.}
+We use a single 80/20 stratified split (\texttt{random\_state=42}) shared across both the regressor and classifier, ensuring metrics are evaluated on identical test rows. We validate stability via 5-fold cross-validation on the training partition.
+
+\paragraph{Exploratory Analysis.}
+Figure~\ref{fig:eda} shows feature distributions split by label. Accepted pairs cluster at lower detour distances and higher overlap ratios, confirming that the stochastic labeling produces realistic patterns. The model has to actually learn the boundary, not just memorize a trivial threshold.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=\columnwidth]{figures/feature_distributions.png}
+\caption{Feature distributions by acceptance label. Accepted pairs (green) show lower detour and higher overlap than rejected pairs (red).}
+\label{fig:eda}
+\end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 4. METHODS — due with Update 2 (Data & Methodology)
@@ -157,42 +191,54 @@ While shareability networks~\citep{santi2014quantifying} and learning-augmented 
 \section{Methods}
 \label{sec:methods}
 
-% Describe each model you use, with relevant mathematical formulations.
-
 \subsection{Evaluation Metrics}
 \label{sec:metrics}
 
-% Define and motivate the evaluation metrics you will use.
-% - Why are these metrics appropriate for your problem?
-% - Are there trade-offs between metrics (e.g., precision vs. recall)?
+We evaluate two prediction tasks with complementary metrics:
 
-\subsection{Baseline Model}
+\textbf{Regression} (detour prediction): Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE). MAE gives the average prediction error in km; RMSE penalizes large errors more heavily, which matters because a 10~km misprediction is much worse than two 5~km errors.
+
+\textbf{Classification} (accept/reject): Accuracy, Precision, Recall, F1-score, and ROC-AUC. We prioritize F1 over raw accuracy because the classes are close to balanced (43/57 split) but not perfectly so. ROC-AUC measures ranking quality across all thresholds, which matters here because the bipartite matcher uses continuous probability scores, not hard 0/1 predictions.
+
+\subsection{Baseline Models}
 \label{sec:baseline}
 
-% Describe your simple baseline model.
-% REQUIREMENT: Must be trainable with scikit-learn.
-% - What is the model and why did you choose it?
-% - Mathematical formulation (e.g., objective function)
-% - Key hyperparameters
+\textbf{Rule-Based Baseline.} A zero-learning heuristic: accept any pair where detour $\leq \delta_{\text{max}}$ and time difference $\leq 15$~min. This is what a naive app would do. Thresholds are read from the same config file that generated the training data, ensuring a fair comparison.
 
-\subsection{Advanced Model}
+\textbf{Logistic Regression.} A linear classifier trained via scikit-learn with balanced class weights. Given feature vector $\mathbf{x}$, it models:
+\begin{equation}
+P(y=1 \mid \mathbf{x}) = \sigma(\mathbf{w}^T\mathbf{x} + b)
+\end{equation}
+where $\sigma$ is the sigmoid function. Features are standardized via \texttt{StandardScaler} (fit on training data only). Logistic regression cannot capture interaction effects (e.g., a 2.5~km detour is fine when the fare is \$30 but not when it's \$8), which motivates the non-linear model.
+
+\subsection{Advanced Model: Dual-Objective XGBoost}
 \label{sec:advanced}
 
-% Describe your more complex model.
-% REQUIREMENT: Must use deep learning, ensembling, transfer learning,
-% or another advanced technique.
-% - Architecture or algorithm description
-% - Mathematical formulation where appropriate
-% - Key hyperparameters
+Our advanced model is an ensemble of gradient-boosted decision trees~\citep{chen2016xgboost} with two heads:
+
+\textbf{Regressor} minimizes squared error on detour prediction:
+\begin{equation}
+\mathcal{L}_{\text{reg}} = \sum_{i} (y_i^{\text{det}} - \hat{y}_i^{\text{det}})^2 + \Omega(f)
+\end{equation}
+
+\textbf{Classifier} minimizes log loss on acceptance prediction:
+\begin{equation}
+\mathcal{L}_{\text{clf}} = -\sum_{i} \big[ y_i \log \hat{p}_i + (1-y_i)\log(1-\hat{p}_i) \big] + \Omega(f)
+\end{equation}
+where $\Omega(f) = \gamma T + \frac{1}{2}\lambda \|\mathbf{w}\|^2$ is the XGBoost regularization term ($T$ = number of leaves). Both models share the same 5 input features but predict different targets.
+
+At inference, their outputs are fused into a composite match score (as defined in Section~\ref{sec:introduction}), which serves as edge weights in the bipartite matching layer.
 
 \subsection{Training Procedure}
 \label{sec:training}
 
-% Describe your training and validation procedure:
-% - Optimization method (SGD, Adam, etc.)
-% - Hyperparameter tuning method (grid search, random search, Optuna, etc.)
-% - Cross-validation strategy
-% - Hardware used (Colab GPU, etc.)
+\textbf{Hyperparameter tuning.} We run exhaustive grid search over \texttt{n\_estimators} $\in \{50, 100, 200\}$, \texttt{max\_depth} $\in \{3, 5, 7\}$, and \texttt{learning\_rate} $\in \{0.05, 0.1, 0.2\}$ (27 combinations) with 5-fold cross-validation on the training partition. The best configuration is selected by accuracy.
+
+\textbf{Validation.} After selecting hyperparameters, we run 5-fold CV on the training set with the best parameters to confirm stability. We report mean $\pm$ standard deviation across folds.
+
+\textbf{Final evaluation.} The tuned model is retrained on the full 80\% training set and evaluated on the held-out 20\% test set. All reported metrics come from this test set, which was never seen during training or hyperparameter selection.
+
+\textbf{Hardware.} All experiments run on a single-core CPU (Apple M-series). Grid search completes in under 30 seconds on the 750-pair dev dataset; production runs ($\sim$10K pairs) take approximately 5 minutes.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 5. RESULTS — due with Update 3 (Baseline Results) and Final

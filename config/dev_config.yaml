@@ -1,0 +1,25 @@
+# DEVELOPMENT CONFIGURATION
+# Used for fast testing on small amounts of data.
+
+data:
+  # The base URL for TLC trip data (parquet format)
+  base_url: "https://d37ci6vzurychx.cloudfront.net/trip-data"
+  # In dev mode, we only fetch one specific month to save time/bandwidth
+  taxi_type: "yellow"
+  year: 2025
+  month: 8
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+
+simulation:
+  time_window:
+    start_hour: 7
+    end_hour: 10
+  # Downsample ratio for fast testing (e.g. 0.05 = keep only 5% of trips)
+  sample_ratio: 0.05
+  # Matching thresholds (same as prod for consistent training)
+  max_detour_km: 3.0
+  max_detour_mins: 15.0
+  search_radius_km: 5.0
+  batch_window_mins: 5
+  driver_ratio: 0.5
