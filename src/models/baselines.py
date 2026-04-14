@@ -7,15 +7,19 @@ from sklearn.preprocessing import StandardScaler
 
 class RuleBasedBaseline:
     """
-    Simple threshold baseline. Accepts any pair where detour < max_km
-    and time difference < max_mins. No learning, just hard cutoffs.
+    A simple zero-intelligence benchmarking model.
+    
+    Why it is needed:
+    A machine learning model must mathematically justify its own existence. This class 
+    simulates a 'dumb' app that simply accepts any ride strictly under X km. 
+    It provides our absolute minimum performance floor.
     """
     def __init__(self, max_km=3.0, max_mins=15.0):
         self.max_km = max_km
         self.max_mins = max_mins
         
     def predict(self, df):
-        """Predict 1 (accept) or 0 (reject) based on threshold cutoffs."""
+        """Returns 1 (accepted) or 0 (rejected) explicitly based on rigid cutoffs."""
         predictions = (
             (df['detour_distance_km'] <= self.max_km) & 
             (df['time_diff_mins'] <= self.max_mins)
@@ -33,8 +37,13 @@ class RuleBasedBaseline:
 
 class LogisticRegressionBaseline:
     """
-    Logistic regression baseline with standardized features.
-    Provides a linear decision boundary to compare against XGBoost.
+    Standard Linear Prediction Baseline.
+    
+    Why it is needed:
+    While RuleBased gives us the logical floor, LogisticRegression provides 
+    the statistical floor. Logistic Regression struggles with non-linear feature 
+    spaces (like the relationship between spatial overlaps and time), proving 
+    why we eventually graduate to XGBoost Decision Trees.
     """
     def __init__(self):
         # Balanced prevents class-imbalance from zero-crushing predictions
@@ -42,7 +51,7 @@ class LogisticRegressionBaseline:
         # Scaling is required for distance math, otherwise KM vastly outweighs Ratio logic
         self.scaler = StandardScaler()
         # Explicit feature definition
-        self.features = ['driver_orig_dist', 'detour_distance_km', 'overlap_ratio', 'time_diff_mins', 'driver_approx_fare', 'rider_approx_fare']
+        self.features = ['driver_orig_dist', 'detour_distance_km', 'overlap_ratio', 'time_diff_mins', 'driver_approx_fare', 'rider_approx_fare', 'fare_ratio', 'pickup_hour', 'pickup_dow']
         
     def prepare_data(self, df):
         X = df[self.features]

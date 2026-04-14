@@ -6,12 +6,16 @@ from src.simulation.feature_eng import calculate_detour_cost, compute_spatial_ov
 
 class PairGenerator:
     """
-    Simulates a P2P carpooling marketplace from single-passenger taxi trips.
-    Splits trips into drivers/riders, pairs them spatially and temporally,
-    and generates labeled training data with stochastic acceptance labels.
+    Core Machine Learning Simulator Engine.
+    
+    Why this class is needed:
+    Real-world open source datasets containing completed P2P carpools do not exist.
+    This class algorithmically forces single-passenger NYC taxi rides into overlapping 
+    Commuter ('Driver') and Requestor ('Rider') pairings, engineered specifically 
+    to train our XGBoost models on acceptable vs unacceptable geographic detours.
     """
     def __init__(self, processed_data_path, config_path="config/dev_config.yaml"):
-        # Load config
+        # Utilizing YAML parameters ensures our ML simulator is highly reproducible
         with open(config_path, "r") as file:
             self.config = yaml.safe_load(file)
             
@@ -25,7 +29,11 @@ class PairGenerator:
         self.sim_config = self.config["simulation"]
         
     def filter_commuting_window(self):
-        """Filter trips to the commute window (e.g. 7-10 AM)."""
+        """
+        Isolates temporal commutes.
+        Why: We only care about P2P carpooling during high-volume directional flows 
+        (like Morning 7AM-10AM rushes).
+        """
         start_hr = self.sim_config["time_window"]["start_hour"]
         end_hr = self.sim_config["time_window"]["end_hour"]
         
@@ -67,7 +75,7 @@ class PairGenerator:
         Design Principle (Training vs Inference separation):
         During training, we collect every pair within the detour threshold and assign
         labels independently via multi-factor stochastic scoring. This gives the model
-        the full distribution of feasible matches -both great and mediocre.
+        the full distribution of feasible matches — both great and mediocre.
         
         At inference time (production), the trained model's predictions serve as edge
         weights in a Bipartite Graph, where networkx.max_weight_matching selects the
@@ -112,7 +120,7 @@ class PairGenerator:
                 continue
             
             # Build a BallTree spatial index from rider pickup coordinates (once per batch).
-            # Uses Haversine metric on the unit sphere -requires radians.
+            # Uses Haversine metric on the unit sphere — requires radians.
             # Query complexity: O(log N) per driver instead of O(N) linear scan.
             from sklearn.neighbors import BallTree
             rider_coords_rad = np.radians(
@@ -122,8 +130,11 @@ class PairGenerator:
             EARTH_RADIUS_KM = 6371.0
             SEARCH_RADIUS_KM = self.sim_config.get("search_radius_km", 5.0)
             
-            # Collect all feasible pairs in this batch (not just optimal ones).
-            # Bipartite matching happens at inference, not during training.
+            # Collect ALL feasible pairs in this batch — not just bipartite-optimal ones.
+            # Why: Training data must represent the full distribution of feasible matches
+            # so the model learns to score mediocre pairs low AND great pairs high.
+            # Bipartite matching is an INFERENCE-TIME optimization (using the trained
+            # model's predictions as edge weights), not a training-time data filter.
             for driver in batch_drivers.itertuples():
                 if d_count >= limit: break
                 d_idx = driver.Index
@@ -159,17 +170,17 @@ class PairGenerator:
                         # Models acceptance as a composite of independent behavioral
                         # factors the ML model must learn to combine.
                         
-                        # Factor 1: Fare profitability -is the rider's fare worth the detour?
+                        # Factor 1: Fare profitability — is the rider's fare worth the detour?
                         fare_ratio = rider.fare_amount / max(driver.fare_amount, 1.0)
                         fare_score = min(fare_ratio, 1.5) / 1.5  # Normalize to [0, 1]
                         
-                        # Factor 2: Temporal inconvenience -how disruptive is the timing?
+                        # Factor 2: Temporal inconvenience — how disruptive is the timing?
                         time_score = max(0, 1.0 - (diff_mins / 15.0))  # 0 at 15min, 1 at 0min
                         
-                        # Factor 3: Trip length ratio -short detour on long trip = acceptable
+                        # Factor 3: Trip length ratio — short detour on long trip = acceptable
                         trip_ratio = d_orig_dist / max(d_orig_dist + detour, 0.1)
                         
-                        # Factor 4: Detour severity -normalized by threshold
+                        # Factor 4: Detour severity — normalized by threshold
                         detour_score = 1.0 - (detour / max_detour_km)
                         
                         # Composite acceptance probability with weighted factors
@@ -184,6 +195,12 @@ class PairGenerator:
                         noise = np.random.gumbel(0, 0.1)
                         is_accepted = 1 if (acceptance_prob + noise) > 0.45 else 0
                         
+                        # Pre-computed interaction features — hand the model direct signals
+                        # instead of making it discover the ratio relationship through splits
+                        fare_ratio = rider.fare_amount / max(driver.fare_amount, 1.0)
+                        pickup_hour = driver.tpep_pickup_datetime.hour
+                        pickup_dow  = driver.tpep_pickup_datetime.weekday()
+
                         final_pairs.append({
                             'driver_id': d_idx,
                             'rider_id': r_idx,
@@ -193,6 +210,9 @@ class PairGenerator:
                             'time_diff_mins': diff_mins,
                             'driver_approx_fare': driver.fare_amount,
                             'rider_approx_fare': rider.fare_amount,
+                            'fare_ratio': fare_ratio,
+                            'pickup_hour': pickup_hour,
+                            'pickup_dow': pickup_dow,
                             'label': is_accepted
                         })
                 
@@ -202,7 +222,8 @@ class PairGenerator:
                 print(f"Processed {d_count} drivers across batches. Current feasible pairs: {len(final_pairs)}")
 
         # Generate negative labels: real pairs that genuinely fail the matching criteria
-        # Compute real features for negatives (not hardcoded zeros)
+        # We compute ALL features honestly — no hardcoded fakes — so the model learns
+        # real rejection patterns instead of trivial shortcuts.
         print("Generating negative labels from genuinely infeasible pairs...")
         rng = np.random.RandomState(42)
         negative_pairs = []
@@ -226,12 +247,14 @@ class PairGenerator:
             if detour <= max_detour_km:
                 continue
             
-            # Compute actual features for this pair
+            # Compute REAL features — no fakes
             overlap_ratio = compute_spatial_overlap(detour, d_orig_dist)
             driver_time = self.drivers_df.loc[d_idx, 'tpep_pickup_datetime']
             rider_time = self.riders_df.loc[r_idx, 'tpep_pickup_datetime']
             _, time_diff = calculate_time_overlap(driver_time, rider_time)
             
+            d_fare = self.drivers_df.loc[d_idx, 'fare_amount']
+            r_fare = self.riders_df.loc[r_idx, 'fare_amount']
             negative_pairs.append({
                 'driver_id': d_idx,
                 'rider_id': r_idx,
@@ -239,8 +262,11 @@ class PairGenerator:
                 'detour_distance_km': detour,
                 'overlap_ratio': overlap_ratio,
                 'time_diff_mins': time_diff,
-                'driver_approx_fare': self.drivers_df.loc[d_idx, 'fare_amount'],
-                'rider_approx_fare': self.riders_df.loc[r_idx, 'fare_amount'],
+                'driver_approx_fare': d_fare,
+                'rider_approx_fare': r_fare,
+                'fare_ratio': r_fare / max(d_fare, 1.0),
+                'pickup_hour': driver_time.hour,
+                'pickup_dow': driver_time.weekday(),
                 'label': 0
             })
         
