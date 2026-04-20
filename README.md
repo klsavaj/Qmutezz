@@ -100,13 +100,45 @@ Then submit the tag name and a compiled PDF of the report (if applicable) on Can
 
 ## How to Reproduce Our Results
 
-*(Fill this in before final submission. Include steps to set up the environment, download data, and run the code.)*
+### Environment Setup
 
 ```bash
-# Example
-pip install -r requirements.txt
-python src/data_preprocessing.py
-python src/baseline_model.py
-python src/advanced_model.py
-python src/evaluation.py
+conda env create -f environment.yml
+conda activate qmutez
 ```
+
+### Pipeline (3 steps — run in order)
+
+**Step 1 — Data ingestion and coordinate synthesis** (run once):
+```bash
+PYTHONPATH=. conda run -n qmutez python src/data/loader.py
+```
+Downloads the August 2025 NYC TLC Yellow Taxi dataset (~800 MB), synthesizes GPS coordinates from zone IDs, and saves to `data/processed/`.
+
+**Step 2 — Simulation** (generates labeled driver-rider pairs):
+```bash
+PYTHONPATH=. conda run -n qmutez python src/simulation/pair_generator.py
+```
+Runs the P2P simulation using BallTree spatial indexing and multi-factor stochastic labeling. Saves `data/simulated/candidate_pairs.parquet`.
+
+**Step 3 — Model training and evaluation**:
+```bash
+PYTHONPATH=. conda run -n qmutez python src/models/xgb_matching.py
+```
+Trains the dual-objective XGBoost model (regressor + classifier), runs 5-fold cross-validation and grid search, generates all evaluation figures in `figures/`, and prints system-level bipartite matching metrics.
+
+To also evaluate the baselines:
+```bash
+PYTHONPATH=. conda run -n qmutez python src/models/baselines.py
+```
+
+### Output Figures
+
+After running Step 3, the `figures/` directory contains:
+| File | Description |
+|------|-------------|
+| `feature_importance.png` | XGBoost feature importance by gain |
+| `roc_curve.png` | ROC curve with AUC score |
+| `ablation_study.png` | Accuracy drop when each feature is removed |
+| `learning_curve.png` | Train vs CV accuracy across training set sizes |
+| `system_tradeoff_curve.png` | Match rate vs avg driver detour across score thresholds |
