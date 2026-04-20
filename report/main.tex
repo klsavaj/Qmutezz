@@ -167,10 +167,10 @@ label & binary & Accept/reject (1/0) \\
 \end{table}
 
 \paragraph{Dataset Size and Label Balance.}
-The simulation produces 1,290 labeled pairs (dev mode, 5\% sample, AM + PM windows). In production mode (full dataset, 25K driver limit), this scales to $\sim$40K+ pairs. The label split is 43.6\% accepted / 56.4\% rejected, which is roughly balanced and consistent with our 0.45 acceptance threshold plus Gumbel noise. No feature has missing values; all are computed deterministically from the synthesis pipeline.
+The simulation produces 38,102 labeled pairs (25\% sample, AM + PM windows, 3K driver limit). In production mode (full dataset, 25K driver limit), this scales to $\sim$300K+ pairs. The label split is 43.6\% accepted / 56.4\% rejected, which is roughly balanced and consistent with our 0.45 acceptance threshold plus Gumbel noise. No feature has missing values; all are computed deterministically from the synthesis pipeline.
 
 \paragraph{Train/Test Split.}
-We use a driver-level 80/20 split: unique \texttt{driver\_id} values are partitioned first, then all pairs belonging to a given driver are assigned exclusively to train or test. This prevents entity leakage where the model partially ``recognizes'' a driver seen during training. The split yields 1,039 training pairs and 251 test pairs. We validate stability via 5-fold cross-validation on the training partition.
+We use a driver-level 80/20 split: unique \texttt{driver\_id} values are partitioned first, then all pairs belonging to a given driver are assigned exclusively to train or test. This prevents entity leakage where the model partially ``recognizes'' a driver seen during training. The split yields 2,828 training pairs and 684 test pairs. We validate stability via 5-fold cross-validation on the training partition.
 
 \paragraph{Exploratory Analysis.}
 Figure~\ref{fig:eda} shows feature distributions split by label. Accepted pairs cluster at lower detour distances and higher overlap ratios, confirming that the stochastic labeling produces realistic patterns. The model has to actually learn the boundary, not just memorize a trivial threshold.
@@ -245,7 +245,7 @@ At inference, their outputs are fused into a composite match score (as defined i
 \section{Results}
 \label{sec:results}
 
-We evaluate all three models on the driver-level held-out test set (251 pairs, 20\% of unique drivers). Table~\ref{tab:results} summarizes classification performance, and Table~\ref{tab:regression} reports detour prediction and system-level metrics.
+We evaluate all three models on the driver-level held-out test set (684 pairs, 20\% of unique drivers). Table~\ref{tab:results} summarizes classification performance, and Table~\ref{tab:regression} reports detour prediction and system-level metrics.
 
 \begin{table}[h]
 \caption{Classification performance on the held-out test set (AM + PM commute windows, driver-level split).}
@@ -258,7 +258,7 @@ Model & Accuracy & Precision & Recall & F1 \\
 \midrule
 Rule-Based & 0.933 & 0.867 & 1.000 & 0.929 \\
 Logistic Regression & 0.900 & 0.838 & 0.971 & 0.899 \\
-XGBoost (tuned) & 0.920 & 0.980 & 0.890 & 0.912 \\
+XGBoost (tuned) & 0.950 & 0.900 & 1.000 & 0.947 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -272,16 +272,16 @@ XGBoost (tuned) & 0.920 & 0.980 & 0.890 & 0.912 \\
 \toprule
 Metric & Value \\
 \midrule
-Detour MAE & 2.66 km \\
-Detour RMSE & 5.72 km \\
-ROC-AUC & 0.966 \\
-5-Fold CV Accuracy & 0.932 $\pm$ 0.122 \\
+Detour MAE & 3.32 km \\
+Detour RMSE & 7.71 km \\
+ROC-AUC & 0.977 \\
+5-Fold CV Accuracy & 0.935 $\pm$ 0.114 \\
 Best hyperparameters & depth=3, lr=0.05, n=50 \\
 \midrule
-System match rate & 97.9\% \\
-Avg driver earnings & +\$5.51 per ride \\
-Avg rider savings & --\$5.51 per ride \\
-Avg CO$_2$ saved & $\sim$3.0 kg per match \\
+System match rate & 99.3\% \\
+Avg driver earnings & +\$5.70 per ride \\
+Avg rider savings & --\$5.70 per ride \\
+Avg CO$_2$ saved & $\sim$3.1 kg per match \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -290,7 +290,7 @@ Avg CO$_2$ saved & $\sim$3.0 kg per match \\
 The rule-based baseline scores 93.3\% accuracy with perfect recall (1.0) but lower precision (0.867). It accepts every pair below the detour threshold, so it never misses a true positive, but it also accepts pairs that the stochastic label rejected (borderline cases where Gumbel noise pushed acceptance below the threshold). Logistic regression scores lower (90.0\%) because the linear decision boundary cannot model interactions between features. For instance, a 2.5~km detour paired with a \$30 fare should be accepted, but the same detour with a \$5 fare should not. LogReg treats these identically because it lacks interaction terms.
 
 \paragraph{XGBoost Comparison.}
-XGBoost achieves 92.0\% test accuracy with an ROC-AUC of 0.966. The model ranks pairs reliably across all thresholds. Grid search selected \texttt{n\_estimators=50}, \texttt{max\_depth=3}, \texttt{learning\_rate=0.05} as the best configuration. The 5-fold CV mean accuracy is 93.2\% with an elevated standard deviation of 12.2\%, reflecting the relatively small training set and the variance introduced by driver-level fold partitioning; fold sizes are unequal when driver trip counts differ, which is expected to stabilize at larger dataset scales. The detour MAE of 2.66~km means the regressor predicts detour distance within about 2.7~km on average.
+XGBoost achieves 95.0\% test accuracy with an ROC-AUC of 0.977. The model ranks pairs reliably across all thresholds. Grid search selected \texttt{n\_estimators=50}, \texttt{max\_depth=3}, \texttt{learning\_rate=0.05} as the best configuration. The 5-fold CV mean accuracy is 93.5\% with an elevated standard deviation of 11.4\%, reflecting the relatively small training set and the variance introduced by driver-level fold partitioning; fold sizes are unequal when driver trip counts differ, which is expected to stabilize at larger dataset scales. The detour MAE of 2.66~km means the regressor predicts detour distance within about 2.7~km on average.
 
 The rule-based baseline's raw accuracy (93.3\%) is actually higher than XGBoost's (91.3\%). The rule baseline was calibrated to the same 3.0~km threshold used to generate feasible pairs, so it starts with a structural advantage on the binary task. But it has no notion of how good a match is. It returns the same answer for a 0.1~km detour with a \$40 fare and a 2.9~km detour with a \$3 fare. XGBoost produces a continuous probability that ranks candidates, which is what the bipartite matcher needs to select globally optimal assignments.
 

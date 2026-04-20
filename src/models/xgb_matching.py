@@ -156,10 +156,15 @@ class MultiObjectiveMatcher:
         # --- Save plots ---
         os.makedirs("figures", exist_ok=True)
 
-        # Feature importance
+        # Feature importance — manual bar chart to avoid long decimal labels
+        importance_dict = self.classifier.get_booster().get_score(importance_type='gain')
+        feats_sorted = sorted(importance_dict, key=importance_dict.get)
+        scores_sorted = [importance_dict[f] for f in feats_sorted]
         fig, ax = plt.subplots(figsize=(8, 5))
-        xgb.plot_importance(self.classifier, ax=ax, importance_type='gain')
+        ax.barh(feats_sorted, scores_sorted, color='steelblue')
+        ax.set_xlabel("Importance Score (Gain)")
         ax.set_title("Feature Importance (Classifier — Gain)")
+        ax.xaxis.set_major_formatter(plt.FuncFormatter(lambda x, _: f'{x:.0f}'))
         fig.tight_layout()
         fig.savefig("figures/feature_importance.png", dpi=150)
         plt.close(fig)
@@ -182,7 +187,7 @@ class MultiObjectiveMatcher:
         # --- Feature ablation study ---
         # Remove each feature one at a time, retrain, measure accuracy drop.
         # The bigger the drop, the more important the feature.
-        print("\nRunning feature ablation study...")
+        print("\nRunning feature ablation study (ROC-AUC drop)...")
         ablation_results = {}
         for feat in self.features:
             ablation_feats = [f for f in self.features if f != feat]
@@ -191,10 +196,11 @@ class MultiObjectiveMatcher:
                 scale_pos_weight=scale_pos_weight, **best_params
             )
             clf_ablation.fit(X_train[ablation_feats], yc_train)
-            ablation_acc = accuracy_score(yc_test, clf_ablation.predict(X_test[ablation_feats]))
-            ablation_results[feat] = round(acc - ablation_acc, 4)
+            abl_proba = clf_ablation.predict_proba(X_test[ablation_feats])[:, 1]
+            ablation_roc = roc_auc_score(yc_test, abl_proba)
+            ablation_results[feat] = round(roc_auc - ablation_roc, 4)
 
-        print("Accuracy drop when feature removed (higher = more important):")
+        print("ROC-AUC drop when feature removed (higher = more important):")
         for feat, drop in sorted(ablation_results.items(), key=lambda x: -x[1]):
             print(f"  {feat}: {drop:+.4f}")
 
@@ -202,8 +208,8 @@ class MultiObjectiveMatcher:
         feats_sorted = sorted(ablation_results, key=lambda x: ablation_results[x])
         drops_sorted = [ablation_results[f] for f in feats_sorted]
         ax.barh(feats_sorted, drops_sorted, color='steelblue')
-        ax.set_xlabel("Accuracy drop when removed")
-        ax.set_title("Feature Ablation Study")
+        ax.set_xlabel("ROC-AUC drop when removed (higher = more important)")
+        ax.set_title("Feature Ablation Study (ROC-AUC)")
         ax.axvline(0, color='black', linewidth=0.8)
         fig.tight_layout()
         fig.savefig("figures/ablation_study.png", dpi=150)
@@ -238,6 +244,7 @@ class MultiObjectiveMatcher:
         ax.set_xlabel('Training set size')
         ax.set_ylabel('Accuracy')
         ax.set_title('Learning Curves — XGBoost Classifier')
+        ax.set_ylim([0.4, 1.02])
         ax.legend()
         fig.tight_layout()
         fig.savefig("figures/learning_curve.png", dpi=150)
@@ -294,36 +301,59 @@ class MultiObjectiveMatcher:
         print(f"  Avg rider savings    : -${avg_rider_saving:.2f} per ride")
         print(f"  Avg CO2 saved        : {avg_co2_saved_g:.0f} g per match")
 
-        # Trade-off curve: match rate vs avg detour across score thresholds
-        thresholds  = [-0.5, -0.2, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
-        tc_rates, tc_detours = [], []
-        for thresh in thresholds:
-            m = _run_bipartite(test_df, score_threshold=thresh)
-            tc_rates.append(len(m) / max(n_test_drivers, 1) * 100)
-            if m:
-                mk = set()
-                for u, v in m:
-                    d = u if str(u).startswith('D_') else v
-                    r = v if str(v).startswith('R_') else u
-                    mk.add((d, r))
-                mdf = test_df[test_df.apply(
-                    lambda row: (f"D_{row['driver_id']}", f"R_{row['rider_id']}") in mk, axis=1
-                )]
-                tc_detours.append(mdf['detour_distance_km'].mean())
-            else:
-                tc_detours.append(0)
+        # Trade-off curve: match rate vs avg detour across acceptance probability thresholds.
+        # Use predict_proba thresholds directly (not score thresholds) so the curve
+        # reflects a meaningful operator knob: "only match if model is >X% confident."
+        prob_thresholds = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+        tc_rates, tc_detours, tc_labels = [], [], []
 
-        fig, ax = plt.subplots(figsize=(7, 5))
-        ax.plot(tc_detours, tc_rates, 'o-', color='steelblue')
-        for x, y, t in zip(tc_detours, tc_rates, thresholds):
-            ax.annotate(f"t={t}", (x, y), textcoords="offset points", xytext=(5, 4), fontsize=8)
-        ax.set_xlabel('Avg Driver Detour (km)')
-        ax.set_ylabel('Match Rate (%)')
-        ax.set_title('System Trade-off: Match Rate vs Avg Detour')
-        fig.tight_layout()
-        fig.savefig("figures/system_tradeoff_curve.png", dpi=150)
-        plt.close(fig)
-        print("Saved figures/system_tradeoff_curve.png")
+        proba_test = self.classifier.predict_proba(X_test)[:, 1]
+        test_df_reset = test_df.reset_index(drop=True)
+
+        for thresh in prob_thresholds:
+            # Keep only pairs where model is confident enough
+            confident = test_df_reset[proba_test >= thresh].copy()
+            if confident.empty:
+                continue
+            B2 = nx.Graph()
+            for _, row in confident.iterrows():
+                prob = proba_test[row.name] if row.name < len(proba_test) else 0
+                B2.add_edge(f"D_{row['driver_id']}", f"R_{row['rider_id']}", weight=prob)
+            m2 = nx.max_weight_matching(B2, maxcardinality=True)
+            rate = len(m2) / max(n_test_drivers, 1) * 100
+            mk2 = set()
+            for u, v in m2:
+                d2 = u if str(u).startswith('D_') else v
+                r2 = v if str(v).startswith('R_') else u
+                mk2.add((d2, r2))
+            mdf2 = confident[confident.apply(
+                lambda row: (f"D_{row['driver_id']}", f"R_{row['rider_id']}") in mk2, axis=1
+            )]
+            avg_det = mdf2['detour_distance_km'].mean() if len(mdf2) else 0
+            tc_rates.append(rate)
+            tc_detours.append(avg_det)
+            tc_labels.append(f">{int(thresh*100)}%")
+
+        # Prepend the no-threshold baseline so the full range is visible
+        all_detours = [avg_detour] + tc_detours
+        all_rates   = [match_rate]  + tc_rates
+        all_labels  = ['all pairs'] + tc_labels
+
+        if all_rates:
+            fig, ax = plt.subplots(figsize=(8, 5))
+            ax.plot(all_detours, all_rates, 'o-', color='steelblue', linewidth=2, markersize=8)
+            for x, y, lbl in zip(all_detours, all_rates, all_labels):
+                ax.annotate(lbl, (x, y), textcoords="offset points", xytext=(6, 4), fontsize=9)
+            # Mark the no-threshold baseline in orange
+            ax.plot(avg_detour, match_rate, 'o', color='#f77f00', markersize=11, zorder=5)
+            ax.set_xlabel('Avg Driver Detour (km)', fontsize=11)
+            ax.set_ylabel('Match Rate (%)', fontsize=11)
+            ax.set_title('Trade-off: Higher Confidence → Fewer Matches, Shorter Detour', fontsize=11)
+            ax.grid(True, alpha=0.2)
+            fig.tight_layout()
+            fig.savefig("figures/system_tradeoff_curve.png", dpi=150)
+            plt.close(fig)
+            print("Saved figures/system_tradeoff_curve.png")
 
         return X_test, yr_test, yc_test, pred_detour, pred_match
 
