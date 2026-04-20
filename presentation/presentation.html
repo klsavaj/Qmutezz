@@ -381,20 +381,20 @@
         <tr><th>Model</th><th>Accuracy</th><th>F1</th><th>ROC-AUC</th></tr>
         <tr><td>Rule-Based (distance cutoff)</td><td>93.3%</td><td>92.9%</td><td>—</td></tr>
         <tr><td>Logistic Regression</td><td>90.0%</td><td>89.9%</td><td>—</td></tr>
-        <tr class="hi"><td><strong>XGBoost (our model)</strong></td><td><strong>95.0%</strong></td><td><strong>94.7%</strong></td><td><strong>0.977</strong></td></tr>
+        <tr class="hi"><td><strong>XGBoost (our model)</strong></td><td><strong>94.0%</strong></td><td><strong>93.9%</strong></td><td><strong>0.982</strong></td></tr>
       </table>
       <div class="callout">
         The rule-based model gets 93.3% accuracy but gives the same answer for a great match and a terrible match. XGBoost outputs a <strong>score from 0 to 1</strong> that ranks every candidate, which is what makes optimal assignment possible.
       </div>
       <div style="margin-top:.5rem; display:flex; gap:.4rem; flex-wrap:wrap;">
-        <div class="pill">5-Fold CV: 93.5%</div>
-        <div class="pill">Detour MAE: 3.32 km</div>
+        <div class="pill">5-Fold CV: 85.2%</div>
+        <div class="pill">Detour MAE: 2.74 km</div>
         <div class="pill">Best: depth=3, lr=0.05</div>
       </div>
     </div>
     <div class="c45">
       <img class="img" src="roc_curve.png" alt="ROC Curve">
-      <p class="cap">ROC-AUC of 0.977 means the model correctly ranks 97.7% of match pairs by quality</p>
+      <p class="cap">ROC-AUC of 0.982 means the model correctly ranks 98.2% of match pairs by quality</p>
     </div>
   </div>
 </section>
@@ -474,7 +474,7 @@
     <div class="c50">
       <div class="stat-grid">
         <div class="big-stat">
-          <span class="val">99.3%</span>
+          <span class="val">98.9%</span>
           <span class="lbl">Match Rate</span>
         </div>
         <div class="big-stat">
@@ -511,7 +511,7 @@
     <div class="c50">
       <p style="font-size:.63em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">Key Insights</p>
       <div class="card teal" style="margin-bottom:.45rem;">
-        <strong>Rule-based beats XGBoost on raw accuracy?</strong> Yes, but that is because the rule was tuned to the same threshold that generated the data. XGBoost's <em>ranking ability</em> (ROC-AUC 0.977) is what actually matters for matching.
+        <strong>Rule-based beats XGBoost on raw accuracy?</strong> Yes, but that is because the rule was tuned to the same threshold that generated the data. XGBoost's <em>ranking ability</em> (ROC-AUC 0.982) is what actually matters for matching.
       </div>
       <div class="card orange">
         <strong>Extending to AM + PM windows</strong> nearly doubled training data (720 → 1,290 pairs) with minimal accuracy loss. Both rush hours are needed for a real product.
