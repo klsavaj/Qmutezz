@@ -221,7 +221,7 @@
     <div class="c55">
       <ul>
         <li>Average US car: <strong style="color:var(--orange)">1.08 passengers</strong> at peak hours</li>
-        <li>Uber/Lyft solve it for professional drivers — not daily commuters</li>
+        <li>Uber/Lyft solve it for professional drivers, not daily commuters</li>
         <li>Commuters need a different solution:
           <ul>
             <li>Fixed routes, fixed schedules</li>
@@ -232,15 +232,15 @@
         <li>No algorithm today handles <strong>detour + fare + timing together</strong></li>
       </ul>
       <div class="callout">
-        "If even 10% of solo commuters shared rides, NYC could remove 300,000 cars from morning traffic." — Santi et al., PNAS 2014
+        "If even 10% of solo commuters shared rides, NYC could remove 300,000 cars from morning traffic." (Santi et al., PNAS 2014)
       </div>
     </div>
     <div class="c45">
       <div class="compare">
         Driver: Bronx → Midtown (8 km)<br>
         &nbsp;&nbsp;↓<br>
-        <span class="good">+ Rider B: 1.8 km off-route, $22 fare ✅</span><br>
-        <span class="bad">+ Rider C: 1.8 km off-route, &nbsp;$3 fare ❌</span>
+        <span class="good">+ Rider B: 1.8 km off-route, $22 fare  [ACCEPTED]</span><br>
+        <span class="bad">+ Rider C: 1.8 km off-route, &nbsp;$3 fare  [REJECTED]</span>
         <p class="note">Same detour distance.<br>Completely different answer.<br>Only ML can tell the difference.</p>
       </div>
     </div>
@@ -252,7 +252,7 @@
      SLIDE 3 — No dataset exists
 ══════════════════════════════════════════ -->
 <section>
-  <h2>There is no carpooling dataset — so we built one</h2>
+  <h2>There is no carpooling dataset, so we built one</h2>
   <div class="row">
     <div class="c55">
       <ul>
@@ -264,14 +264,14 @@
       </ul>
       <br>
       <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-        <div class="pill">📅 AM 7–10 + PM 4–7</div>
-        <div class="pill">🗽 All of August 2025</div>
-        <div class="pill">⚖️ 44% accepted / 56% rejected</div>
+        <div class="pill">AM 7-10 + PM 4-7</div>
+        <div class="pill">All of August 2025</div>
+        <div class="pill">44% accepted / 56% rejected</div>
       </div>
     </div>
     <div class="c45">
       <img class="img" src="feature_distributions.png" alt="Feature distributions">
-      <p class="cap">Accepted pairs (green) show lower detour and higher route overlap — our labeling creates realistic patterns</p>
+      <p class="cap">Accepted pairs (green) show lower detour and higher route overlap, confirming the labeling creates realistic patterns</p>
     </div>
   </div>
 </section>
@@ -288,11 +288,11 @@
       <div class="steps">
         <div class="step">
           <div class="snum">1</div>
-          <div><strong>Find the zone boundary</strong> — download official NYC shapefile maps<br><span class="sub">263 zone polygons, precise to the street</span></div>
+          <div><strong>Find the zone boundary</strong>: download official NYC shapefile maps<br><span class="sub">263 zone polygons, precise to the street</span></div>
         </div>
         <div class="step">
           <div class="snum">2</div>
-          <div><strong>Place pickup randomly inside the zone</strong> — not at the center<br><span class="sub">Avoids clustering 10,000 trips at one fake point</span></div>
+          <div><strong>Place pickup randomly inside the zone</strong>, not at the center<br><span class="sub">Avoids clustering 10,000 trips at one fake point</span></div>
         </div>
         <div class="step">
           <div class="snum">3</div>
@@ -313,7 +313,7 @@
         What we synthesize:<br>
         &nbsp;&nbsp;pickup_lat = 40.758, lon = -73.985<br>
         &nbsp;&nbsp;dropoff_lat = 40.712, lon = -74.006
-        <p class="note">Haversine distance of our synthesized<br>coords matches real taxi meter exactly ✅</p>
+        <p class="note">Haversine distance of our synthesized<br>coords matches real taxi meter exactly</p>
       </div>
     </div>
   </div>
@@ -360,7 +360,7 @@
     </div>
   </div>
   <div style="background:rgba(255,255,255,.04); border-radius:6px; padding:.35rem .8rem; margin-top:.5rem; font-size:.48em; color:#aaa; text-align:center; font-style:italic;">
-    This architecture (ML scores → optimal matching) is formally proven to outperform either approach alone — Bjorck et al., AAAI 2021
+    This architecture (ML scores as edge weights in bipartite matching) is formally proven to outperform either approach alone (Bjorck et al., AAAI 2021)
   </div>
 </section>
 
@@ -379,7 +379,7 @@
         <tr class="hi"><td><strong>XGBoost (our model)</strong></td><td><strong>95.0%</strong></td><td><strong>94.7%</strong></td><td><strong>0.977</strong></td></tr>
       </table>
       <div class="callout">
-        The rule-based model gets 93.3% accuracy but gives the same answer for a great match and a terrible match. XGBoost outputs a <strong>score from 0 to 1</strong> that ranks every candidate — that's what makes optimal assignment possible.
+        The rule-based model gets 93.3% accuracy but gives the same answer for a great match and a terrible match. XGBoost outputs a <strong>score from 0 to 1</strong> that ranks every candidate, which is what makes optimal assignment possible.
       </div>
       <div style="margin-top:.5rem; display:flex; gap:.4rem; flex-wrap:wrap;">
         <div class="pill">5-Fold CV: 93.5%</div>
@@ -389,7 +389,7 @@
     </div>
     <div class="c45">
       <img class="img" src="roc_curve.png" alt="ROC Curve">
-      <p class="cap">ROC curve — a value of 0.966 means the model correctly ranks 96.6% of match pairs by quality</p>
+      <p class="cap">ROC-AUC of 0.977 means the model correctly ranks 97.7% of match pairs by quality</p>
     </div>
   </div>
 </section>
@@ -436,11 +436,11 @@
      SLIDE 8 — Model Diagnostics
 ══════════════════════════════════════════ -->
 <section>
-  <h2>Is the model actually learning — or just memorizing?</h2>
+  <h2>Is the model actually learning, or just memorizing?</h2>
   <div class="row">
     <div class="c50">
       <img class="img" src="learning_curve.png" alt="Learning Curve">
-      <p class="cap">Training accuracy vs held-out accuracy as dataset grows — curves converge, model generalizes</p>
+      <p class="cap">Training accuracy vs held-out accuracy as dataset grows. Curves converge, confirming the model generalizes.</p>
     </div>
     <div class="c50">
       <p style="font-size:.65em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">Why we split by Driver ID, not randomly</p>
@@ -448,12 +448,12 @@
         <strong>The problem:</strong> If the same driver appears in both training and test data, the model "recognizes" their patterns and scores look better than they really are.
       </div>
       <div class="card green">
-        <strong>Our fix:</strong> Split unique drivers 80/20 first. All pairs for a given driver go to ONE partition only — train or test, never both.
+        <strong>Our fix:</strong> Split unique drivers 80/20 first. All pairs for a given driver go to ONE partition only (train or test, never both).
       </div>
       <br>
       <div style="font-size:.6em; color:#aaa; margin-top:.3rem;">
-        ✅ 0 driver IDs appear in both train and test sets<br>
-        ✅ Accuracy reflects true generalization
+        - 0 driver IDs appear in both train and test sets<br>
+        - Accuracy reflects true generalization
       </div>
     </div>
   </div>
@@ -501,12 +501,12 @@
      SLIDE 10 — Discussion + Ethics
 ══════════════════════════════════════════ -->
 <section>
-  <h2>What we learned — and what we need to be careful about</h2>
+  <h2>What we learned, and what we need to be careful about</h2>
   <div class="row">
     <div class="c50">
       <p style="font-size:.63em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">Key Insights</p>
       <div class="card teal" style="margin-bottom:.45rem;">
-        <strong>Rule-based beats XGBoost on raw accuracy?</strong> Yes — but that's because the rule was tuned to the same threshold that generated the data. XGBoost's <em>ranking ability</em> (ROC-AUC 0.966) is what actually matters for matching.
+        <strong>Rule-based beats XGBoost on raw accuracy?</strong> Yes, but that is because the rule was tuned to the same threshold that generated the data. XGBoost's <em>ranking ability</em> (ROC-AUC 0.977) is what actually matters for matching.
       </div>
       <div class="card orange">
         <strong>Extending to AM + PM windows</strong> nearly doubled training data (720 → 1,290 pairs) with minimal accuracy loss. Both rush hours are needed for a real product.
@@ -514,10 +514,10 @@
     </div>
     <div class="c50">
       <p style="font-size:.63em; color:var(--orange); font-weight:bold; margin-bottom:.4rem;">Ethical Considerations</p>
-      <div class="warn-row"><span class="w">🔒</span><strong>Privacy:</strong> Real GPS traces reveal home + work addresses — strict encryption and data minimization required</div>
-      <div class="warn-row"><span class="w">⚖️</span><strong>Fairness:</strong> Model trained on NYC data may underserve low-income neighborhoods with fewer training trips</div>
-      <div class="warn-row"><span class="w">🛡️</span><strong>Safety:</strong> P2P strangers in a car — background checks and ride tracking are non-negotiable before launch</div>
-      <div class="warn-row"><span class="w">🤖</span><strong>Bias:</strong> Higher fares make riders more attractive — could create a wealth-based matching advantage</div>
+      <div class="warn-row"><strong>Privacy:</strong> Real GPS traces reveal home and work addresses. Strict encryption and data minimization required.</div>
+      <div class="warn-row"><strong>Fairness:</strong> Model trained on NYC data may underserve low-income neighborhoods with fewer training trips.</div>
+      <div class="warn-row"><strong>Safety:</strong> P2P strangers in a car. Background checks and ride tracking are non-negotiable before launch.</div>
+      <div class="warn-row"><strong>Bias:</strong> Higher fares make riders more attractive, which could create a wealth-based matching advantage.</div>
     </div>
   </div>
 </section>
@@ -533,23 +533,23 @@
       <p style="font-size:.63em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">3 Novel Contributions</p>
       <div class="contrib">
         <div class="cnum">1</div>
-        <div><strong>Synthetic P2P dataset</strong> from 3.5M real taxi trips — corridor-aware GPS synthesis with polygon validation</div>
+        <div><strong>Synthetic P2P dataset</strong> from 3.5M real taxi trips, using corridor-aware GPS synthesis with polygon validation</div>
       </div>
       <div class="contrib">
         <div class="cnum">2</div>
-        <div><strong>Dual-objective XGBoost</strong> — predicts both detour distance AND acceptance probability, combined into one ranking score</div>
+        <div><strong>Dual-objective XGBoost</strong>: predicts both detour distance and acceptance probability, combined into one ranking score</div>
       </div>
       <div class="contrib">
         <div class="cnum">3</div>
-        <div><strong>Learning-augmented matching</strong> — ML scores as edge weights in bipartite optimization, provably optimal (Bjorck et al., AAAI 2021)</div>
+        <div><strong>Learning-augmented matching</strong>: ML scores as edge weights in bipartite optimization, provably optimal (Bjorck et al., AAAI 2021)</div>
       </div>
     </div>
     <div class="c50">
       <p style="font-size:.63em; color:var(--orange); font-weight:bold; margin-bottom:.4rem;">Honest Limitations</p>
-      <div class="warn-row"><span class="w">⚠</span>Labels are <strong>simulated</strong> — not real driver decisions</div>
-      <div class="warn-row"><span class="w">⚠</span>Straight-line distance — ignores rivers, bridges, one-ways</div>
-      <div class="warn-row"><span class="w">⚠</span>NYC only — suburban/rural generalization untested</div>
-      <div class="warn-row"><span class="w">⚠</span>Dev sample — full production would run on 40K+ pairs</div>
+      <div class="warn-row">Labels are <strong>simulated</strong>, not real driver decisions</div>
+      <div class="warn-row">Straight-line distance ignores rivers, bridges, and one-ways</div>
+      <div class="warn-row">NYC only — suburban and rural generalization untested</div>
+      <div class="warn-row">Dev sample used — full production would run on 40K+ pairs</div>
       <p style="font-size:.52em; color:#888; margin-top:.5rem; border-top:1px solid rgba(255,255,255,.1); padding-top:.35rem;">
         <strong>Next:</strong> Real road routing (OSRM) · Employer subsidies · Cross-city validation (Chicago) · Live deployment data
       </p>
