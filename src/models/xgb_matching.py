@@ -244,6 +244,87 @@ class MultiObjectiveMatcher:
         plt.close(fig)
         print("Saved figures/learning_curve.png")
 
+        # --- System-level bipartite matching evaluation ---
+        # Fulfills proposal Section 5: match rate, avg driver detour,
+        # avg driver earnings, avg rider cost reduction, trade-off curve.
+        print("\nRunning system-level bipartite matching evaluation...")
+        import networkx as nx
+
+        def _run_bipartite(pairs_df, score_threshold=None):
+            B = nx.Graph()
+            for _, row in pairs_df.iterrows():
+                score = self.compute_match_score(row[self.features])
+                if score_threshold is not None and score < score_threshold:
+                    continue
+                B.add_edge(
+                    f"D_{row['driver_id']}", f"R_{row['rider_id']}",
+                    weight=max(score, 0), data=row
+                )
+            return nx.max_weight_matching(B, maxcardinality=True)
+
+        optimal = _run_bipartite(test_df)
+
+        # Identify matched pair rows
+        matched_keys = set()
+        for u, v in optimal:
+            d = u if str(u).startswith('D_') else v
+            r = v if str(v).startswith('R_') else u
+            matched_keys.add((d, r))
+
+        matched_df = test_df[test_df.apply(
+            lambda row: (f"D_{row['driver_id']}", f"R_{row['rider_id']}") in matched_keys,
+            axis=1
+        )]
+
+        n_test_drivers = test_df['driver_id'].nunique()
+        match_rate     = len(optimal) / max(n_test_drivers, 1) * 100
+        avg_detour     = matched_df['detour_distance_km'].mean() if len(matched_df) else 0
+        # Rider pays 30% of their fare to the driver as the incentive split
+        avg_driver_earn  = matched_df['rider_approx_fare'].clip(lower=0).mean() * 0.3 if len(matched_df) else 0
+        avg_rider_saving = matched_df['rider_approx_fare'].clip(lower=0).mean() * 0.3 if len(matched_df) else 0
+        # CO2: rider avoided a solo taxi (rider_fare / $2.50/mile = miles, * 404g/mile)
+        avg_co2_saved_g  = (matched_df['rider_approx_fare'].clip(lower=0) / 2.5 * 404).mean() if len(matched_df) else 0
+
+        print(f"\nSystem-Level Results (Bipartite Matching on Test Set):")
+        print(f"  Unique test drivers  : {n_test_drivers}")
+        print(f"  Optimal matches      : {len(optimal)}")
+        print(f"  Match rate           : {match_rate:.1f}%")
+        print(f"  Avg driver detour    : {avg_detour:.2f} km")
+        print(f"  Avg driver earnings  : +${avg_driver_earn:.2f} per ride")
+        print(f"  Avg rider savings    : -${avg_rider_saving:.2f} per ride")
+        print(f"  Avg CO2 saved        : {avg_co2_saved_g:.0f} g per match")
+
+        # Trade-off curve: match rate vs avg detour across score thresholds
+        thresholds  = [-0.5, -0.2, 0.0, 0.1, 0.2, 0.3, 0.4, 0.5]
+        tc_rates, tc_detours = [], []
+        for thresh in thresholds:
+            m = _run_bipartite(test_df, score_threshold=thresh)
+            tc_rates.append(len(m) / max(n_test_drivers, 1) * 100)
+            if m:
+                mk = set()
+                for u, v in m:
+                    d = u if str(u).startswith('D_') else v
+                    r = v if str(v).startswith('R_') else u
+                    mk.add((d, r))
+                mdf = test_df[test_df.apply(
+                    lambda row: (f"D_{row['driver_id']}", f"R_{row['rider_id']}") in mk, axis=1
+                )]
+                tc_detours.append(mdf['detour_distance_km'].mean())
+            else:
+                tc_detours.append(0)
+
+        fig, ax = plt.subplots(figsize=(7, 5))
+        ax.plot(tc_detours, tc_rates, 'o-', color='steelblue')
+        for x, y, t in zip(tc_detours, tc_rates, thresholds):
+            ax.annotate(f"t={t}", (x, y), textcoords="offset points", xytext=(5, 4), fontsize=8)
+        ax.set_xlabel('Avg Driver Detour (km)')
+        ax.set_ylabel('Match Rate (%)')
+        ax.set_title('System Trade-off: Match Rate vs Avg Detour')
+        fig.tight_layout()
+        fig.savefig("figures/system_tradeoff_curve.png", dpi=150)
+        plt.close(fig)
+        print("Saved figures/system_tradeoff_curve.png")
+
         return X_test, yr_test, yc_test, pred_detour, pred_match
 
     def compute_match_score(self, feature_row):
