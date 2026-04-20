@@ -167,7 +167,7 @@ class PairGenerator:
                     
                     if detour <= max_detour_km:
                         overlap_ratio = compute_spatial_overlap(detour, d_orig_dist)
-                        time_compat, diff_mins = calculate_time_overlap(driver.tpep_pickup_datetime, rider.tpep_pickup_datetime)
+                        diff_mins = calculate_time_overlap(driver.tpep_pickup_datetime, rider.tpep_pickup_datetime)
                         
                         # Multi-factor Ground Truth Labeling
                         # Models acceptance as a composite of independent behavioral
@@ -255,7 +255,7 @@ class PairGenerator:
             overlap_ratio = compute_spatial_overlap(detour, d_orig_dist)
             driver_time = self.drivers_df.loc[d_idx, 'tpep_pickup_datetime']
             rider_time = self.riders_df.loc[r_idx, 'tpep_pickup_datetime']
-            _, time_diff = calculate_time_overlap(driver_time, rider_time)
+            time_diff = calculate_time_overlap(driver_time, rider_time)
             
             d_fare = self.drivers_df.loc[d_idx, 'fare_amount']
             r_fare = self.riders_df.loc[r_idx, 'fare_amount']
