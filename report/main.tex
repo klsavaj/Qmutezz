@@ -66,13 +66,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{abstract}
-% Write a 150–250 word summary of your project. Include:
-% - The problem you are solving
-% - Your approach (baseline + advanced model)
-% - Key results
-% - Main takeaway
-%
-% TIP: Write this last, after all other sections are complete.
+Peer-to-peer (P2P) commuter carpooling offers significant potential for reducing urban congestion and vehicle emissions, but effective matching requires simultaneously minimizing driver detour, maximizing economic incentive, and ensuring temporal compatibility — objectives that simple threshold-based systems cannot balance. No public P2P carpooling dataset exists, so we construct one by synthesizing geographically realistic driver--rider pairs from 3.5 million NYC Yellow Taxi trips (August 2025) using corridor-aware coordinate projection and multi-factor stochastic labeling with Gumbel noise. We train a dual-objective XGBoost model that simultaneously predicts detour distance (regression) and driver acceptance probability (classification), combining both outputs into a unified ranking score. At inference time, the scores serve as edge weights in a maximum-weight bipartite graph, producing globally optimal one-to-one driver--rider assignments following the learning-augmented matching paradigm of \citet{bjorck2021learning}. Against a rule-based baseline and a logistic regression baseline, XGBoost achieves an ROC-AUC above 0.96 and a system-level match rate above 95\%, with average driver earnings increasing by over \$5 per matched ride. We discuss the limitations of synthetic labeling, the geodesic distance approximation, and the ethical considerations of deploying algorithmic matching in a P2P mobility context.
 \end{abstract}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -307,27 +301,47 @@ Figure~\ref{fig:importance} shows the XGBoost classifier's feature importance by
 \section{Discussion}
 \label{sec:discussion}
 
-% Interpret your results:
-% - Why does the advanced model outperform (or not) the baseline?
-% - What did you learn from the experiments?
-% - Error analysis: where does your model fail and why?
+\paragraph{Why XGBoost does not always beat the rule-based baseline on raw accuracy.}
+The rule-based baseline achieves 93.3\% accuracy, which is higher than XGBoost's test accuracy. This is not a failure of the advanced model — it is a structural artifact of the simulation. The rule-based model was parameterized with the \emph{same} detour threshold used to generate feasible positive pairs, giving it a built-in alignment with the data-generation process. Despite this, the rule-based model cannot rank candidates: it outputs a binary 0/1 decision and assigns identical scores to a 0.1~km detour with a \$40 fare and a 2.9~km detour with a \$3 fare. XGBoost outputs a continuous probability that serves as the edge weight in bipartite matching, enabling globally optimal 1:1 assignments that the rule-based model cannot produce.
+
+\paragraph{Feature importance and learned behavior.}
+The XGBoost classifier assigns highest gain to \texttt{time\_diff\_mins}, consistent with the labeling formula in which temporal inconvenience carries 25\% weight and temporal misalignment also reduces spatial overlap between pairs. \texttt{driver\_orig\_dist} ranks second, reflecting the model's learned understanding that detour tolerance scales with trip length — a 2~km detour on a 4~km commute is qualitatively different from the same detour on a 40~km highway trip. The newly added features \texttt{fare\_ratio} and \texttt{shareability\_count} contribute modest but measurable signal, consistent with the behavioral economics framing of the labeling policy.
+
+\paragraph{Cross-validation stability.}
+The 5-fold cross-validation standard deviation is elevated, reflecting the relatively small training set and the driver-level splitting strategy. Because unique driver identifiers are partitioned rather than individual pairs, fold sizes vary when driver trip counts are unequal. This is expected to improve substantially with larger production datasets where the law of large numbers stabilizes fold composition.
+
+\paragraph{System-level evaluation.}
+The bipartite matching layer achieves a high system-level match rate, demonstrating that the combination of spatial pre-filtering, ML-predicted scores, and optimal assignment is effective even on a synthetic dataset. The trade-off curve (Figure~\ref{fig:tradeoff}) confirms the expected inverse relationship between match rate and average detour: stricter score thresholds yield cleaner matches at the cost of unmatched drivers.
 
 \subsection{Limitations}
 \label{sec:limitations}
 
-% Be honest about the limitations of your approach:
-% - Data limitations (size, bias, representativeness)
-% - Model limitations (assumptions, scalability)
-% - Evaluation limitations
+\paragraph{Synthetic labels.}
+The most significant limitation is that ground-truth acceptance labels are simulated rather than observed. The labeling policy (a weighted composite of four behavioral factors plus Gumbel noise) is designed to be logically sound, but it cannot capture the full complexity of human decision-making. Real drivers may reject matches for reasons outside the feature space — personal preference, schedule uncertainty, or distrust of the platform — none of which are modeled. The circular relationship between simulated labels and model features is mitigated by the multi-factor composite and stochastic noise, but cannot be eliminated without real deployment data.
+
+\paragraph{Geodesic distance approximation.}
+All distance calculations use geodesic (straight-line) distance via \texttt{geopy}, which approximates road-network distance. This approximation fails in topographically complex environments: a rider 3~km away across a river with no nearby bridge may require a 20-minute detour, while the same Euclidean distance along a highway requires 30 seconds. Hsieh~\citep{hsieh2017car} demonstrated that trajectory-based matching with real road-network routing substantially improves match quality. Integrating an open-source routing engine (e.g., OSRM) is the highest-priority engineering improvement for a production deployment.
+
+\paragraph{Dataset scope.}
+The simulation is trained on NYC Yellow Taxi data from a single month (August 2025). NYC is atypically dense and exhibits strong directional commute corridors that may not generalize to lower-density cities or suburban regions. The production dataset is further limited by the driver processing limit, which controls the number of positive pairs generated. While the feature abstraction design (dimensionless ratios rather than absolute coordinates) is intended to promote generalizability, empirical validation on a second city dataset remains future work.
+
+\paragraph{Commute window assumptions.}
+The simulation restricts trips to morning (7--10~AM) and evening (4--7~PM) commute windows. This excludes irregular commuters, shift workers, and non-commute use cases. The 50/50 driver/rider split is a simplification; real P2P marketplaces are typically driver-heavy in suburbs and rider-heavy in urban cores.
 
 \subsection{Ethical Considerations}
 \label{sec:ethics}
 
-% Discuss potential ethical implications:
-% - Could your model cause harm if deployed?
-% - Are there fairness or bias concerns in the data or predictions?
-% - Privacy considerations?
-% - How could these risks be mitigated?
+\paragraph{Privacy.}
+A live deployment of this system requires collecting real-time GPS traces from users' mobile devices. These traces are highly sensitive: they reveal home addresses, workplace locations, and daily routines. Any production system must enforce strict data minimization (storing only the features required for matching, not raw GPS logs), end-to-end encryption in transit, and a defined data retention policy. Compliance with applicable regulations (GDPR, CCPA) is a prerequisite for deployment.
+
+\paragraph{Fairness and geographic bias.}
+The model is trained exclusively on NYC taxi data, which over-represents high-density commercial corridors and under-represents lower-income residential neighborhoods with fewer recorded trips. Features derived from \texttt{fare\_amount} may implicitly encode economic status: a rider with a higher fare becomes more attractive to drivers, which could systematically disadvantage riders from lower-fare zones. Evaluating acceptance probability disparities across demographic groups — even in simulation — is an important step before any real deployment.
+
+\paragraph{Algorithmic bias in matching.}
+The bipartite matching layer maximizes total match score across the system. This global optimization may consistently fail to match riders in sparse or low-score corridors because matching them would reduce system-wide utility. Incorporating fairness constraints into the matching objective (e.g., minimum match-rate guarantees per zone) would be necessary to ensure equitable access.
+
+\paragraph{Safety.}
+Peer-to-peer carpooling involves strangers sharing a vehicle, introducing safety risks absent from professional ride-hailing. A production deployment requires driver background verification, real-time ride tracking visible to a trusted contact, and an in-ride emergency mechanism. The matching algorithm should not be deployed without these safeguards, regardless of its predictive accuracy.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % 7. CONCLUSION — due with Final Report
@@ -336,10 +350,13 @@ Figure~\ref{fig:importance} shows the XGBoost classifier's feature importance by
 \section{Conclusion}
 \label{sec:conclusion}
 
-% Summarize your contributions:
-% - What problem did you address?
-% - What were the key findings?
-% - What would you do differently or next with more time?
+We presented an incentive-aware multi-objective matching framework for peer-to-peer commuter carpooling. The core problem — that no public P2P carpooling dataset exists and that effective matching requires balancing detour cost, fare incentives, and temporal compatibility simultaneously — motivated a three-stage architecture: a data synthesis pipeline, a dual-objective gradient-boosted model, and a bipartite matching layer.
+
+Our primary contributions are: (1) a reproducible coordinate synthesis pipeline that generates geographically realistic driver--rider training pairs from public single-passenger taxi records using corridor-aware forward azimuth projection and point-in-polygon validation; (2) a dual-objective XGBoost architecture that simultaneously predicts detour distance (regression) and acceptance probability (classification), fused into a unified ranking score; and (3) an implementation of the learning-augmented matching paradigm~\citep{bjorck2021learning}, in which ML-predicted scores serve as edge weights in maximum-weight bipartite matching, with a strict separation between training (all feasible pairs) and inference (optimal assignment).
+
+Empirically, XGBoost achieves competitive classification accuracy with an ROC-AUC above 0.96, confirming reliable candidate ranking across all decision thresholds. The system-level bipartite evaluation demonstrates high match rates with meaningful driver earnings increases and measurable CO$_2$ savings per matched pair. The rule-based baseline's higher raw accuracy underscores that accuracy alone is an insufficient metric for ranking-based systems: continuous probability scores, not binary decisions, are required for optimal assignment.
+
+The most important direction for future work is replacing geodesic distance with road-network routing via an open-source engine such as OSRM~\citep{hsieh2017car}, which would substantially improve match quality in topographically complex environments. A second priority is empirical cross-city validation — testing the NYC-trained model on Chicago or Boston taxi data without retraining — to confirm that the dimensionless feature abstraction generalizes as intended. Finally, replacing synthetic labels with real accept/reject outcomes from a live deployment would eliminate the fundamental limitation of behavioral simulation and enable the model to learn from genuine human decisions.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % REFERENCES
