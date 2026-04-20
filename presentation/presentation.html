@@ -3,560 +3,418 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Incentive-Aware P2P Carpooling — CS6140</title>
+  <title>P2P Carpooling Matching — CS6140</title>
 
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reset.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/reveal.css">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@5.1.0/dist/theme/black.css">
 
   <style>
+    /* ─── base ─── */
     :root {
-      --teal:   #00b4d8;
-      --orange: #f77f00;
-      --green:  #06d6a0;
-      --red:    #ef476f;
-      --bg:     #0d1b2a;
+      --bg:     #0f172a;
+      --text:   #e2e8f0;
+      --muted:  #94a3b8;
+      --accent: #38bdf8;
+      --hi:     #fbbf24;
+      --green:  #34d399;
+      --red:    #f87171;
+      --card:   rgba(255,255,255,0.04);
+      --border: rgba(255,255,255,0.10);
     }
-
-    .reveal {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: var(--bg);
-    }
+    .reveal { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); font-size: 30px; }
     .reveal .slides section { text-align: left; }
 
-    /* ── headline ── */
-    .reveal h2 {
-      font-size: 1.15em;
-      color: var(--teal);
-      border-bottom: 2px solid var(--teal);
-      padding-bottom: .2rem;
-      margin-bottom: .6rem;
-    }
+    /* ─── headings ─── */
+    .reveal h2 { font-size: .95em; font-weight: 600; color: var(--accent); margin-bottom: .45em; padding-bottom: .18em; border-bottom: 1px solid var(--border); text-transform: none; letter-spacing: normal; }
+    .reveal h3 { font-size: .72em; font-weight: 600; color: var(--hi); margin: .35em 0 .18em; text-transform: none; letter-spacing: normal; }
 
-    /* ── bullets ── */
-    .reveal ul {
-      font-size: .75em;
-      line-height: 1.75;
-      margin: 0;
-    }
-    .reveal ul ul { font-size: .9em; margin-top: .2rem; }
+    /* ─── bullets ─── */
+    .reveal ul { font-size: .65em; line-height: 1.65; margin: 0; }
+    .reveal ul ul { font-size: .92em; color: var(--muted); }
 
-    /* ── layout helpers ── */
-    .row { display: flex; gap: 1.4rem; align-items: flex-start; }
-    .c40 { flex: 0 0 40%; } .c45 { flex: 0 0 45%; }
-    .c50 { flex: 0 0 50%; } .c55 { flex: 0 0 55%; }
-    .c60 { flex: 0 0 60%; } .c65 { flex: 0 0 65%; }
+    /* ─── layout ─── */
+    .cols { display: flex; gap: 1.4rem; align-items: flex-start; }
+    .w40 { flex: 0 0 40%; } .w45 { flex: 0 0 45%; }
+    .w50 { flex: 0 0 50%; } .w55 { flex: 0 0 55%; }
+    .w60 { flex: 0 0 60%; }
 
-    /* ── images ── */
-    .img { width: 100%; border-radius: 8px; border: 1px solid rgba(255,255,255,.12); }
-    .cap { font-size: .46em; color: #999; font-style: italic; text-align: center; margin-top: .25rem; }
-
-    /* ── big stat ── */
-    .big-stat {
-      text-align: center;
-      background: rgba(0,180,216,.08);
-      border: 1px solid var(--teal);
-      border-radius: 12px;
-      padding: .8rem .6rem;
-    }
-    .big-stat .val {
-      font-size: 2.2em;
-      font-weight: 900;
-      color: var(--orange);
-      display: block;
-      line-height: 1.1;
-    }
-    .big-stat .lbl {
-      font-size: .52em;
-      color: #bbb;
-      display: block;
-      margin-top: .2rem;
-    }
-
-    /* ── stat grid ── */
-    .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
-
-    /* ── card ── */
-    .card {
-      background: rgba(255,255,255,.04);
-      border-radius: 10px;
-      padding: .7rem .9rem;
-      font-size: .68em;
-      line-height: 1.55;
-    }
-    .card.teal   { border-left: 4px solid var(--teal);   }
-    .card.orange { border-left: 4px solid var(--orange); }
-    .card.green  { border-left: 4px solid var(--green);  }
-    .card.red    { border-left: 4px solid var(--red);    }
-    .card strong { color: var(--teal); }
-    .card.orange strong { color: var(--orange); }
-
-    /* ── compare box ── */
-    .compare {
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 10px;
-      padding: .8rem 1rem;
-      font-family: monospace;
-      font-size: .62em;
-      line-height: 2;
-      background: rgba(0,180,216,.06);
-    }
-    .compare .good { color: var(--green); }
-    .compare .bad  { color: var(--red);   }
-    .compare .note {
-      font-family: sans-serif;
-      font-style: italic;
-      color: var(--orange);
-      font-size: .9em;
-      border-top: 1px dashed rgba(247,127,0,.35);
-      padding-top: .4rem;
-      margin-top: .3rem;
-    }
-
-    /* ── pipeline ── */
-    .pipeline { display: flex; gap: .5rem; align-items: stretch; }
-    .pipe {
-      flex: 1;
-      border-radius: 10px;
-      padding: .7rem .8rem;
-      font-size: .6em;
-    }
-    .pipe.t { border: 2px solid var(--teal);   }
-    .pipe.o { border: 2px solid var(--orange); }
-    .pipe h4 { margin: 0 0 .35rem; font-size: 1.1em; color: var(--teal); }
-    .pipe.o h4 { color: var(--orange); }
-    .pipe ul { padding-left: .9rem; margin: 0; }
-    .pipe li { margin: .2rem 0; }
-    .pipe .note { font-size: .88em; color: #888; font-style: italic; margin-top: .4rem; }
-    .arr { display: flex; align-items: center; color: var(--teal); font-size: 1.4em; font-weight: bold; flex-shrink: 0; }
-
-    /* ── results table ── */
-    .rtable { width: 100%; border-collapse: collapse; font-size: .65em; }
-    .rtable th { background: var(--teal); color: #000; padding: .3rem .5rem; text-align: center; }
-    .rtable td { padding: .28rem .5rem; text-align: center; border-bottom: 1px solid rgba(255,255,255,.07); }
-    .rtable tr.hi td { background: rgba(247,127,0,.18); color: var(--orange); font-weight: bold; }
-
-    /* ── callout ── */
-    .callout {
-      border-left: 3px solid var(--orange);
-      background: rgba(247,127,0,.08);
-      padding: .4rem .65rem;
+    /* ─── math box ─── */
+    .math {
+      background: #1e293b;
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      border-radius: 6px;
+      padding: .5em .8em;
+      font-family: 'Courier New', monospace;
       font-size: .58em;
-      font-style: italic;
-      border-radius: 0 6px 6px 0;
-      margin-top: .6rem;
-      line-height: 1.5;
+      line-height: 1.75;
+      color: #cbd5e1;
+      margin: .4em 0;
+    }
+    .math .label { color: var(--accent); font-style: normal; }
+    .math .result { color: var(--hi); }
+
+    /* ─── table ─── */
+    table { width: 100%; border-collapse: collapse; font-size: .62em; }
+    th { background: #1e293b; color: var(--accent); padding: .3em .5em; text-align: center; border-bottom: 1px solid var(--border); }
+    td { padding: .28em .5em; text-align: center; border-bottom: 1px solid var(--border); }
+    tr.best td { background: rgba(251,191,36,.12); color: var(--hi); font-weight: 600; }
+
+    /* ─── image ─── */
+    img.fig { width: 100%; border-radius: 6px; border: 1px solid var(--border); display: block; }
+    img.fig.light { background: #fff; padding: 4px; }
+    .cap { font-size: .44em; color: var(--muted); font-style: italic; text-align: center; margin-top: .25em; }
+
+    /* ─── note / callout ─── */
+    .note {
+      border-left: 3px solid var(--hi);
+      background: rgba(251,191,36,.06);
+      padding: .35em .65em;
+      font-size: .57em;
+      line-height: 1.55;
+      border-radius: 0 5px 5px 0;
+      margin-top: .4em;
     }
 
-    /* ── pill ── */
-    .pill {
-      display: inline-block;
-      background: rgba(0,180,216,.15);
-      border: 1px solid var(--teal);
-      border-radius: 20px;
-      padding: .15rem .55rem;
-      font-size: .54em;
-      margin: .15rem .1rem 0;
-    }
+    /* ─── step list ─── */
+    .steps { display: flex; flex-direction: column; gap: .4em; }
+    .step { display: flex; align-items: flex-start; gap: .55em; font-size: .60em; line-height: 1.5; }
+    .sn { background: var(--accent); color: #0f172a; font-weight: 700; min-width: 1.4em; height: 1.4em; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .85em; }
+    .step .sub { color: var(--muted); font-size: .9em; }
 
-    /* ── step number ── */
-    .steps { display: flex; flex-direction: column; gap: .5rem; }
-    .step  { display: flex; align-items: flex-start; gap: .6rem; font-size: .67em; line-height: 1.5; }
-    .snum  {
-      background: var(--teal); color: #000; font-weight: bold;
-      min-width: 1.5em; height: 1.5em; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0; font-size: .85em;
-    }
-    .step .sub { color: #999; font-size: .88em; font-style: italic; }
+    /* ─── stat boxes ─── */
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: .5em; }
+    .stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .55em; text-align: center; }
+    .stat .v { font-size: 1.4em; font-weight: 800; color: var(--hi); display: block; }
+    .stat .l { font-size: .44em; color: var(--muted); display: block; margin-top: .1em; }
 
-    /* ── warn row ── */
-    .warn-row { font-size: .62em; padding: .28rem 0; border-bottom: 1px solid rgba(255,255,255,.07); line-height: 1.5; }
-    .w { color: var(--orange); margin-right: .3rem; }
+    /* ─── contrib ─── */
+    .contrib { display: flex; gap: .45em; align-items: flex-start; margin-bottom: .4em; font-size: .65em; line-height: 1.45; }
+    .cn { background: var(--accent); color: #0f172a; font-weight: 700; min-width: 1.35em; height: 1.35em; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .82em; }
 
-    /* ── contrib ── */
-    .contrib { display: flex; gap: .5rem; align-items: flex-start; margin-bottom: .45rem; font-size: .63em; line-height: 1.4; }
-    .cnum { background: var(--teal); color: #000; font-weight: bold; min-width: 1.4em; height: 1.4em; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: .85em; }
+    /* ─── limit row ─── */
+    .lim { font-size: .63em; padding: .24em 0; border-bottom: 1px solid var(--border); line-height: 1.5; }
 
-    /* ── footer ── */
-    .footer { position: absolute; bottom: -.8rem; left: 0; right: 0; background: linear-gradient(90deg,var(--teal),var(--orange)); color: #000; font-size: .42em; padding: .22rem 1rem; text-align: center; font-weight: bold; border-radius: 4px; }
+    /* ─── footer ─── */
+    .footer { position: absolute; bottom: -.6em; left: 0; right: 0; text-align: center; font-size: .42em; color: var(--muted); }
 
-    /* ── title slide ── */
+    /* ─── title slide ─── */
     .title-s { text-align: center !important; display: flex !important; flex-direction: column; justify-content: center; align-items: center; height: 100%; }
-    .t-main { font-size: 1.3em; font-weight: bold; color: var(--teal); line-height: 1.3; }
-    .t-sub  { font-size: .7em;  color: #aaa; margin-top: .4rem; }
-    .t-auth { font-size: .67em; color: #ddd; margin-top: .9rem; line-height: 1.7; }
-    .t-date { font-size: .5em;  color: #666; margin-top: .25rem; }
-    .t-bar  { width: 80px; height: 3px; background: linear-gradient(90deg,var(--teal),var(--orange)); margin: .7rem auto; border-radius: 2px; }
+    .tm { font-size: 1.25em; font-weight: 700; color: var(--accent); line-height: 1.3; }
+    .ts { font-size: .68em; color: var(--muted); margin-top: .4em; }
+    .ta { font-size: .65em; color: var(--text); margin-top: .9em; line-height: 1.7; }
+    .td { font-size: .5em; color: #475569; margin-top: .25em; }
+    .tbar { width: 60px; height: 2px; background: var(--accent); margin: .65em auto; }
 
-    /* ── refs ── */
-    .ref { font-size: .46em; color: #ccc; line-height: 1.6; margin-bottom: .4rem; }
-    .ref-head { font-size: .5em; color: var(--teal); font-weight: bold; margin-bottom: .25rem; border-bottom: 1px solid var(--teal); padding-bottom: .1rem; }
+    /* ─── ref ─── */
+    .rh { font-size: .5em; color: var(--accent); font-weight: 600; margin-bottom: .2em; border-bottom: 1px solid var(--border); padding-bottom: .1em; }
+    .ri { font-size: .46em; color: #94a3b8; line-height: 1.6; margin-bottom: .35em; }
+
+    /* slide number */
+    .reveal .slide-number { color: #475569; background: transparent; }
   </style>
 </head>
 <body>
 <div class="reveal"><div class="slides">
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 1 — Title
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 1: Title ══ -->
 <section>
   <div class="title-s">
-    <p class="t-main">Incentive-Aware Multi-Objective Matching<br>for Peer-to-Peer Commuter Carpooling</p>
-    <div class="t-bar"></div>
-    <p class="t-sub">CS6140 Machine Learning &nbsp;·&nbsp; Final Project</p>
-    <p class="t-auth">Krunal Savaj<br><small>Khoury College of Computer Sciences · Northeastern University</small></p>
-    <p class="t-date">April 2026</p>
+    <p class="tm">Incentive-Aware Multi-Objective Matching<br>for Peer-to-Peer Commuter Carpooling</p>
+    <div class="tbar"></div>
+    <p class="ts">CS6140 Machine Learning &nbsp;·&nbsp; Final Project</p>
+    <p class="ta">Krunal Savaj<br><small>Khoury College of Computer Sciences &nbsp;·&nbsp; Northeastern University</small></p>
+    <p class="td">April 2026</p>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 2 — The Problem (plain English)
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 2: Problem ══ -->
 <section>
-  <h2>90% of car seats are empty during rush hour</h2>
-  <div class="row">
-    <div class="c55">
+  <h2>The average US car carries 1.08 passengers during peak hours [9]</h2>
+  <div class="cols">
+    <div class="w55">
       <ul>
-        <li>Average US car: <strong style="color:var(--orange)">1.08 passengers</strong> at peak hours</li>
-        <li>Uber/Lyft solve it for professional drivers, not daily commuters</li>
-        <li>Commuters need a different solution:
-          <ul>
-            <li>Fixed routes, fixed schedules</li>
-            <li>Won't go 6 km out of their way for $3</li>
-            <li><em>Will</em> go 2 km out of their way for $25</li>
-          </ul>
-        </li>
-        <li>No algorithm today handles <strong>detour + fare + timing together</strong></li>
+        <li>Uber/Lyft are built for professional drivers, not regular commuters</li>
+        <li>Commuters have fixed routes and low detour tolerance</li>
+        <li>The core difficulty: the same 1.8 km detour can be acceptable or unacceptable depending on the fare and trip length</li>
+        <li>Threshold-based matching systems (e.g., "accept if detour &lt; 3 km") ignore fare and timing interactions and treat all pairs within the threshold identically</li>
       </ul>
-      <div class="callout">
-        "If even 10% of solo commuters shared rides, NYC could remove 300,000 cars from morning traffic." (Santi et al., PNAS 2014)
+      <div class="note">
+        "If 10% of NYC solo commuters shared rides, the city could remove 300,000 cars from morning traffic." (Santi et al., PNAS 2014)
       </div>
     </div>
-    <div class="c45">
-      <div class="compare">
-        Driver: Bronx → Midtown (8 km)<br>
-        &nbsp;&nbsp;↓<br>
-        <span class="good">+ Rider B: 1.8 km off-route, $22 fare  [ACCEPTED]</span><br>
-        <span class="bad">+ Rider C: 1.8 km off-route, &nbsp;$3 fare  [REJECTED]</span>
-        <p class="note">Same detour distance.<br>Completely different answer.<br>Only ML can tell the difference.</p>
+    <div class="w45">
+      <div class="math">
+        Driver: Bronx &rarr; Midtown (8 km)<br>
+        &nbsp;&nbsp;&darr;<br>
+        <span style="color:var(--green)">+ Rider B: 1.8 km detour, $22 fare &nbsp;[ACCEPTED]</span><br>
+        <span style="color:var(--red)">+ Rider C: 1.8 km detour, &nbsp;$3 fare &nbsp;[REJECTED]</span>
+        <div style="margin-top:.5em;font-style:italic;font-size:.9em;color:var(--hi);">Same detour. Different economics.<br>Only ML can tell the difference.</div>
       </div>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 3 — No dataset exists
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 3: Data ══ -->
 <section>
-  <h2>There is no carpooling dataset, so we built one</h2>
-  <div class="row">
-    <div class="c55">
+  <h2>No P2P carpooling dataset exists, so we built one</h2>
+  <div class="cols">
+    <div class="w55">
       <ul>
-        <li><strong>Real P2P carpool data is proprietary</strong> (Uber, Waze own it)</li>
-        <li>We used <strong>3.5 million NYC taxi trips</strong> from August 2025</li>
-        <li>Randomly assigned half as "Drivers", half as "Riders"</li>
-        <li>Simulated: <em>"Would these two people share a ride?"</em></li>
-        <li>Generated <strong>labeled training examples</strong> with realistic acceptance rules:
-          <ul>
-            <li>4-factor composite: detour severity (30%), fare ratio (25%), time gap (25%), trip length ratio (20%)</li>
-            <li>Plus Gumbel noise to simulate human irrationality</li>
-          </ul>
-        </li>
+        <li><strong>Source:</strong> NYC TLC Yellow Taxi, 3.5M trips, August 2025</li>
+        <li><strong>Problem:</strong> TLC removed GPS coordinates in 2016 (privacy). Only zone IDs remain.</li>
+        <li><strong>Approach:</strong> Randomly assign 50% of commute-window trips as Drivers, 50% as Riders. Simulate whether each pair would share a ride.</li>
+        <li><strong>Output:</strong> 38,102 labeled pairs (AM 7–10 + PM 4–7, 25% sample)</li>
+        <li><strong>Label policy:</strong> 4-factor composite score + Gumbel noise:<br>
+          <small style="color:var(--muted)">detour severity (30%), fare ratio (25%), time gap (25%), trip ratio (20%)</small></li>
       </ul>
-      <br>
-      <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
-        <div class="pill">AM 7-10 + PM 4-7</div>
-        <div class="pill">All of August 2025</div>
-        <div class="pill">44% accepted / 56% rejected</div>
-      </div>
     </div>
-    <div class="c45">
-      <img class="img" src="feature_distributions.png" alt="Feature distributions">
-      <p class="cap">Accepted pairs (green) show lower detour and higher route overlap, confirming the labeling creates realistic patterns</p>
+    <div class="w45">
+      <img class="fig light" src="feature_distributions.png" alt="Feature distributions">
+      <p class="cap">Accepted pairs (green) cluster at lower detour and higher overlap ratio, confirming realistic label patterns</p>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 4 — Coordinate Synthesis (simplified)
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 4: Coordinate Synthesis ══ -->
 <section>
-  <h2>One problem: GPS coordinates were removed from the data</h2>
-  <div class="row">
-    <div class="c55">
-      <p style="font-size:.65em; color:#aaa; margin-bottom:.5rem;">NYC stopped sharing exact GPS in 2016. We only get a zone number like "161 = Midtown." You can't calculate detour distances without exact coordinates. So we synthesized them:</p>
+  <h2>How we synthesize exact GPS coordinates from zone IDs</h2>
+  <div class="cols">
+    <div class="w50">
       <div class="steps">
         <div class="step">
-          <div class="snum">1</div>
-          <div><strong>Find the zone boundary</strong>: download official NYC shapefile maps<br><span class="sub">263 zone polygons, precise to the street</span></div>
+          <div class="sn">1</div>
+          <div><strong>Bounding box scatter</strong><br>
+            <span class="sub">Sample (lat, lon) uniformly inside the zone's rectangular bounds. Avoids the artificial clustering problem of centroid-only assignment.</span></div>
         </div>
         <div class="step">
-          <div class="snum">2</div>
-          <div><strong>Place pickup randomly inside the zone</strong>, not at the center<br><span class="sub">Avoids clustering 10,000 trips at one fake point</span></div>
+          <div class="sn">2</div>
+          <div><strong>Point-in-polygon validation</strong><br>
+            <span class="sub">Reject any point outside the actual polygon (coastal zones extend over water). Resample up to 10 rounds.</span></div>
         </div>
         <div class="step">
-          <div class="snum">3</div>
-          <div><strong>Validate the point is inside the actual polygon</strong><br><span class="sub">Bounding boxes extend over water — this catches those</span></div>
+          <div class="sn">3</div>
+          <div><strong>Corridor-aware bearing</strong><br>
+            <span class="sub">Compute true compass direction from pickup zone centroid to dropoff zone centroid. Add Gaussian noise (σ = 0.3 rad ≈ 17°) for street-level variation.</span></div>
         </div>
         <div class="step">
-          <div class="snum">4</div>
-          <div><strong>Project dropoff in the real commute direction</strong><br><span class="sub">Bronx trips point toward Manhattan, not Connecticut</span></div>
+          <div class="sn">4</div>
+          <div><strong>Spherical projection</strong><br>
+            <span class="sub">Project dropoff exactly trip_distance miles along that bearing using spherical trigonometry.</span></div>
         </div>
       </div>
     </div>
-    <div class="c45">
-      <div class="compare" style="font-size:.6em; line-height:2;">
-        What the data gives us:<br>
-        &nbsp;&nbsp;PULocationID = 161 (Midtown)<br>
-        &nbsp;&nbsp;trip_distance = 3.5 miles<br>
-        <br>
-        What we synthesize:<br>
-        &nbsp;&nbsp;pickup_lat = 40.758, lon = -73.985<br>
-        &nbsp;&nbsp;dropoff_lat = 40.712, lon = -74.006
-        <p class="note">Haversine distance of our synthesized<br>coords matches real taxi meter exactly</p>
+    <div class="w50">
+      <h3>Bearing formula (forward azimuth)</h3>
+      <div class="math">
+<span class="label">x</span> = sin(Δλ) · cos(φ₂)<br>
+<span class="label">y</span> = cos(φ₁)·sin(φ₂) − sin(φ₁)·cos(φ₂)·cos(Δλ)<br>
+<span class="label">θ</span> = atan2(x, y) + N(0, 0.3)
       </div>
+      <h3>Spherical dropoff projection</h3>
+      <div class="math">
+<span class="label">d/R</span> = trip_distance / 3958.8<br>
+<br>
+<span class="label">lat₂</span> = arcsin( sin(lat₁)·cos(d/R)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;+ cos(lat₁)·sin(d/R)·cos(θ) )<br>
+<br>
+<span class="label">lon₂</span> = lon₁ + atan2( sin(θ)·sin(d/R)·cos(lat₁),<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;cos(d/R) − sin(lat₁)·sin(lat₂) )
+      </div>
+      <p style="font-size:.5em;color:var(--muted);margin-top:.3em;">Result: Haversine distance of synthesized coordinates matches the real taxi meter distance exactly.</p>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 5 — The 3-Stage Solution
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 5: Model Architecture ══ -->
 <section>
-  <h2>Our solution: Simulate → Predict → Optimize</h2>
-  <div class="pipeline">
-    <div class="pipe t">
-      <h4>① CREATE EXAMPLES</h4>
-      <ul>
-        <li>Find nearby driver-rider pairs</li>
-        <li>Calculate detour, fare ratio, time gap</li>
-        <li>Label each pair: would accept? yes/no</li>
-        <li>Smart search (not brute force)</li>
-      </ul>
-      <p class="note">Like building a practice exam before training the AI</p>
+  <h2>Dual-objective XGBoost + bipartite matching</h2>
+  <div class="cols">
+    <div class="w55">
+      <h3>Feature vector (9 features per pair)</h3>
+      <div class="math">
+<span class="label">x</span> = [ detour_km, overlap_ratio, time_diff_mins,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;driver_fare, rider_fare, fare_ratio,<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;pickup_hour, pickup_dow, shareability_count ]<br>
+<br>
+<span style="color:var(--muted);font-size:.9em;">overlap_ratio = driver_orig_dist / (driver_orig_dist + detour_km), clamped [0,1]<br>
+shareability_count = riders within 5 km in same time batch [1]</span>
+      </div>
+      <h3>Two prediction objectives</h3>
+      <div class="math">
+<span class="label">Model A</span> (Regressor):  ŷ<sub>det</sub> = f<sub>reg</sub>(x) &nbsp;→&nbsp; detour km<br>
+<span class="label">Model B</span> (Classifier): ŷ<sub>acc</sub> = f<sub>clf</sub>(x) &nbsp;→&nbsp; P(accept)<br>
+<br>
+<span class="label">Score</span>: s<sub>ij</sub> = ŷ<sub>acc</sub> &minus; 0.1 · ŷ<sub>det</sub><br>
+<span style="color:var(--muted);font-size:.9em;">&nbsp;&nbsp;&nbsp;(λ = 0.1 is a tunable penalty weight; higher λ penalises detour more)</span>
+      </div>
+      <h3>Bipartite optimization at inference</h3>
+      <div class="math">
+max &nbsp;Σ<sub>ij</sub> s<sub>ij</sub> · x<sub>ij</sub><br>
+s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Σ<sub>i</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each rider matched once)
+      </div>
     </div>
-    <div class="arr">→</div>
-    <div class="pipe o">
-      <h4>② TRAIN THE AI</h4>
-      <ul>
-        <li>Predict how far out of the way (km)</li>
-        <li>Predict if driver says yes (probability)</li>
-        <li>Combine into one ranking score</li>
-        <li>XGBoost — best for this type of data</li>
+    <div class="w45">
+      <ul style="margin-top:.3em;">
+        <li><strong>Why XGBoost?</strong> Gradient-boosted trees outperform neural networks on tabular geospatial data (Grinsztajn et al., NeurIPS 2022)</li>
+        <li><strong>Why dual-model?</strong> Detour is a regression target; acceptance is a classification target. One model cannot serve both.</li>
+        <li><strong>Why bipartite at inference only?</strong> Training on ALL feasible pairs (not just optimal ones) prevents selection bias: the model learns the full distribution of match quality, not only the "winning" pairs.</li>
+        <li><strong>Theoretical guarantee:</strong> Learning-augmented matching provably outperforms pure heuristics or pure ML alone (Bjorck et al., AAAI 2021)</li>
       </ul>
-      <p class="note">Like teaching the AI to think like a driver</p>
     </div>
-    <div class="arr">→</div>
-    <div class="pipe t">
-      <h4>③ MATCH OPTIMALLY</h4>
-      <ul>
-        <li>Score every possible pair</li>
-        <li>Build a graph: drivers ↔ riders</li>
-        <li>Find globally best 1:1 assignments</li>
-        <li>Not greedy — truly optimal</li>
-      </ul>
-      <p class="note">Like a chess algorithm, not first-come-first-served</p>
-    </div>
-  </div>
-  <div style="background:rgba(255,255,255,.04); border-radius:6px; padding:.35rem .8rem; margin-top:.5rem; font-size:.48em; color:#aaa; text-align:center; font-style:italic;">
-    This architecture (ML scores as edge weights in bipartite matching) is formally proven to outperform either approach alone (Bjorck et al., AAAI 2021)
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 6 — Model Results
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 6: Results ══ -->
 <section>
-  <h2>XGBoost ranks matches better than any simple rule</h2>
-  <div class="row">
-    <div class="c55">
-      <table class="rtable">
+  <h2>XGBoost produces better rankings, not just higher accuracy</h2>
+  <div class="cols">
+    <div class="w55">
+      <table>
         <tr><th>Model</th><th>Accuracy</th><th>F1</th><th>ROC-AUC</th></tr>
-        <tr><td>Rule-Based (distance cutoff)</td><td>93.3%</td><td>92.9%</td><td>—</td></tr>
-        <tr><td>Logistic Regression</td><td>90.0%</td><td>89.9%</td><td>—</td></tr>
-        <tr class="hi"><td><strong>XGBoost (our model)</strong></td><td><strong>94.0%</strong></td><td><strong>93.9%</strong></td><td><strong>0.982</strong></td></tr>
+        <tr><td>Rule-Based (distance cutoff)</td><td>93.3%</td><td>92.9%</td><td>n/a</td></tr>
+        <tr><td>Logistic Regression</td><td>90.0%</td><td>89.9%</td><td>n/a</td></tr>
+        <tr class="best"><td>XGBoost (tuned)</td><td>94.0%</td><td>93.9%</td><td>0.982</td></tr>
       </table>
-      <div class="callout">
-        The rule-based model gets 93.3% accuracy but gives the same answer for a great match and a terrible match. XGBoost outputs a <strong>score from 0 to 1</strong> that ranks every candidate, which is what makes optimal assignment possible.
+      <div class="note" style="margin-top:.6em;">
+        The rule-based model scores 93.3% but returns the same binary answer for every pair regardless of quality. XGBoost outputs a continuous probability (0 to 1) that the bipartite optimizer uses as an edge weight to find globally optimal assignments.
       </div>
-      <div style="margin-top:.5rem; display:flex; gap:.4rem; flex-wrap:wrap;">
-        <div class="pill">5-Fold CV: 85.2%</div>
-        <div class="pill">Detour MAE: 2.74 km</div>
-        <div class="pill">Best: depth=3, lr=0.05</div>
+      <div style="display:flex;gap:.5em;flex-wrap:wrap;margin-top:.45em;">
+        <span style="font-size:.54em;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:.15em .55em;">5-Fold CV: 85.2% (±17.9%)</span>
+        <span style="font-size:.54em;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:.15em .55em;">MAE: 2.74 km</span>
+        <span style="font-size:.54em;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:.15em .55em;">Best: depth=3, lr=0.05, n=50</span>
       </div>
     </div>
-    <div class="c45">
-      <img class="img" src="roc_curve.png" alt="ROC Curve">
-      <p class="cap">ROC-AUC of 0.982 means the model correctly ranks 98.2% of match pairs by quality</p>
+    <div class="w45">
+      <img class="fig" src="roc_curve.png" alt="ROC Curve">
+      <p class="cap">ROC-AUC 0.982: 98.2% probability of ranking an accepted pair above a rejected pair. This is the key metric because bipartite matching uses scores as edge weights, not binary labels.</p>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 7 — What drives acceptance?
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 7: Feature Importance ══ -->
 <section>
-  <h2>What does the AI actually learn to look at?</h2>
-  <div class="row">
-    <div class="c50">
-      <img class="img" src="feature_importance.png" alt="Feature Importance">
-      <p class="cap">How much each feature contributes to the model's decisions</p>
+  <h2>What the model actually learns to look at</h2>
+  <div class="cols">
+    <div class="w50">
+      <img class="fig" src="feature_importance.png" alt="Feature Importance">
+      <p class="cap">Feature importance by gain (XGBoost classifier). Higher = model splits on this feature more often and gains more information from it.</p>
     </div>
-    <div class="c50">
-      <div class="steps">
-        <div class="step">
-          <div class="snum" style="background:var(--orange)">#1</div>
-          <div><strong>Time gap between driver and rider</strong><br><span class="sub">A driver won't wait 14 minutes for a stranger</span></div>
-        </div>
-        <div class="step">
-          <div class="snum" style="background:var(--orange)">#2</div>
-          <div><strong>How long is the driver's original trip?</strong><br><span class="sub">2 km detour on 40 km trip = fine. Same on 3 km trip = painful.</span></div>
-        </div>
-        <div class="step">
-          <div class="snum" style="background:var(--orange)">#3</div>
-          <div><strong>Rider fare vs Driver fare ratio</strong><br><span class="sub">Is the extra money worth it?</span></div>
-        </div>
-        <div class="step">
-          <div class="snum" style="background:var(--teal)">#4</div>
-          <div><strong>How busy is this corridor?</strong><br><span class="sub">More riders nearby = better chance of a good match</span></div>
-        </div>
-      </div>
-      <div class="callout">
-        A linear model can't learn that detour + fare <em>together</em> determine the answer. XGBoost splits on both at once.
+    <div class="w50">
+      <ul>
+        <li><strong>shareability_count [1]</strong>: riders within 5 km in the same time batch. High value = driver is in a dense commuter corridor with many viable options.</li>
+        <li><strong>time_diff_mins</strong>: temporal compatibility. Pairs from different time windows also tend to have less spatial overlap, making this doubly informative.</li>
+        <li><strong>fare_ratio</strong> (rider_fare / driver_fare): direct economic incentive signal. Is the rider's fare worth the driver's detour?</li>
+        <li><strong>overlap_ratio</strong> = driver_orig_dist / (driver_orig_dist + detour), clamped [0,1]. ROC-AUC ablation shows +0.010 drop when removed, confirming route overlap is the primary geometric signal.</li>
+      </ul>
+      <div class="note">
+        Logistic regression cannot model that detour + fare interact non-linearly. A 2.5 km detour with a $30 fare should be accepted; the same detour with a $3 fare should not. XGBoost splits on both simultaneously.
       </div>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 8 — Model Diagnostics
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 8: Diagnostics ══ -->
 <section>
-  <h2>Is the model actually learning, or just memorizing?</h2>
-  <div class="row">
-    <div class="c50">
-      <img class="img" src="learning_curve.png" alt="Learning Curve">
-      <p class="cap">Training accuracy vs held-out accuracy as dataset grows. Curves converge, confirming the model generalizes.</p>
+  <h2>Model validation: generalization and honest evaluation</h2>
+  <div class="cols">
+    <div class="w50">
+      <img class="fig" src="learning_curve.png" alt="Learning Curve">
+      <p class="cap">Train and CV accuracy converge as dataset grows, confirming the model generalizes rather than memorizes</p>
     </div>
-    <div class="c50">
-      <p style="font-size:.65em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">Why we split by Driver ID, not randomly</p>
-      <div class="card teal" style="margin-bottom:.5rem;">
-        <strong>The problem:</strong> If the same driver appears in both training and test data, the model "recognizes" their patterns and scores look better than they really are.
-      </div>
-      <div class="card green">
-        <strong>Our fix:</strong> Split unique drivers 80/20 first. All pairs for a given driver go to ONE partition only (train or test, never both).
-      </div>
-      <br>
-      <div style="font-size:.6em; color:#aaa; margin-top:.3rem;">
-        - 0 driver IDs appear in both train and test sets<br>
-        - Accuracy reflects true generalization
+    <div class="w50">
+      <h3>Driver-level train/test split</h3>
+      <ul>
+        <li>Standard random split allows the same driver to appear in both train and test, inflating accuracy through entity leakage</li>
+        <li>Our fix: split unique driver IDs 80/20 first, then assign all pairs for a given driver to one partition only</li>
+        <li>Result: 30,425 train pairs, 7,677 test pairs. Zero driver ID overlap confirmed.</li>
+      </ul>
+      <div class="note" style="margin-top:.5em;">
+        The elevated CV standard deviation (±17.9%) reflects the driver-level splitting: fold sizes vary when driver trip counts are unequal. Expected to stabilize at full production scale (300K+ pairs).
       </div>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 9 — System Results (big impact numbers)
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 9: System Results ══ -->
 <section>
-  <h2>What happens when the system runs for real?</h2>
-  <div class="row">
-    <div class="c50">
-      <div class="stat-grid">
-        <div class="big-stat">
-          <span class="val">98.9%</span>
-          <span class="lbl">Match Rate</span>
-        </div>
-        <div class="big-stat">
-          <span class="val">+$5.70</span>
-          <span class="lbl">Extra earnings per driver / ride</span>
-        </div>
-        <div class="big-stat">
-          <span class="val">-$5.70</span>
-          <span class="lbl">Savings per rider / ride</span>
-        </div>
-        <div class="big-stat">
-          <span class="val">~3 kg</span>
-          <span class="lbl">CO₂ saved per matched ride</span>
-        </div>
+  <h2>Simulated system-level impact after bipartite matching</h2>
+  <div class="cols">
+    <div class="w50">
+      <div class="stats">
+        <div class="stat"><span class="v">98.9%</span><span class="l">Simulated match rate (3,969 test drivers)</span></div>
+        <div class="stat"><span class="v">+$5.75</span><span class="l">Avg driver earnings per ride</span></div>
+        <div class="stat"><span class="v">-$5.75</span><span class="l">Avg rider cost reduction</span></div>
+        <div class="stat"><span class="v">3.1 kg</span><span class="l">CO₂ avoided per match (EPA: 404 g/mile)</span></div>
       </div>
-      <p style="font-size:.5em; color:#888; margin-top:.5rem; text-align:center;">
-        At NYC scale (3M rides/day) → ~2.9 million kg CO₂ saved daily
-      </p>
+      <div class="note" style="margin-top:.4em;font-size:.5em;">
+        <strong>Earnings assumption:</strong> driver receives 30% of rider's fare as the incentive split
+        (avg rider fare $19.17 &times; 0.30 = $5.75). Actual split is a product decision.<br>
+        <strong>CO₂ extrapolation:</strong> at 10% adoption in NYC (300K matched rides/day),
+        estimated <strong>930,000 kg CO₂ avoided daily</strong>
+        (rider's avoided solo taxi: fare/$2.50/mile &times; 404 g/mile, EPA 2023).
+      </div>
     </div>
-    <div class="c50">
-      <img class="img" src="system_tradeoff_curve.png" alt="Tradeoff Curve">
-      <p class="cap">Operators can tune the threshold: be more selective (fewer matches, shorter detours) or more inclusive (more matches, longer detours)</p>
+    <div class="w50">
+      <img class="fig" src="system_tradeoff_curve.png" alt="System Tradeoff">
+      <p class="cap">Operators can tune the confidence threshold. Higher threshold = fewer matches but shorter driver detour. Orange dot = no threshold (all feasible pairs matched).</p>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 10 — Discussion + Ethics
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 10: Discussion + Ethics ══ -->
 <section>
-  <h2>What we learned, and what we need to be careful about</h2>
-  <div class="row">
-    <div class="c50">
-      <p style="font-size:.63em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">Key Insights</p>
-      <div class="card teal" style="margin-bottom:.45rem;">
-        <strong>Rule-based beats XGBoost on raw accuracy?</strong> Yes, but that is because the rule was tuned to the same threshold that generated the data. XGBoost's <em>ranking ability</em> (ROC-AUC 0.982) is what actually matters for matching.
-      </div>
-      <div class="card orange">
-        <strong>Extending to AM + PM windows</strong> nearly doubled training data (720 → 1,290 pairs) with minimal accuracy loss. Both rush hours are needed for a real product.
-      </div>
+  <h2>Interpreting the results and ethical considerations</h2>
+  <div class="cols">
+    <div class="w50">
+      <h3>Key findings</h3>
+      <ul>
+        <li>XGBoost (94.0% accuracy, ROC-AUC 0.982) outperforms rule-based (93.3%) and logistic regression (90.0%). The critical advantage is its continuous probability output: the rule-based model returns only 0/1 and cannot serve as bipartite edge weights.</li>
+        <li>Adding the PM commute window (4–7 PM) alongside AM (7–10 AM) increased training pairs from ~1,290 to 38,102 (a 29x increase) while maintaining accuracy. Both rush hours are needed for a realistic product.</li>
+        <li>ROC-AUC ablation: removing overlap_ratio causes the largest drop (+0.010), confirming that route overlap, not fare alone, is the primary driver of acceptance probability.</li>
+      </ul>
     </div>
-    <div class="c50">
-      <p style="font-size:.63em; color:var(--orange); font-weight:bold; margin-bottom:.4rem;">Ethical Considerations</p>
-      <div class="warn-row"><strong>Privacy:</strong> Real GPS traces reveal home and work addresses. Strict encryption and data minimization required.</div>
-      <div class="warn-row"><strong>Fairness:</strong> Model trained on NYC data may underserve low-income neighborhoods with fewer training trips.</div>
-      <div class="warn-row"><strong>Safety:</strong> P2P strangers in a car. Background checks and ride tracking are non-negotiable before launch.</div>
-      <div class="warn-row"><strong>Bias:</strong> Higher fares make riders more attractive, which could create a wealth-based matching advantage.</div>
+    <div class="w50">
+      <h3>Ethical considerations</h3>
+      <div class="lim"><strong>Privacy:</strong> Real GPS traces reveal home and work addresses. Strict encryption and data minimization are required before any deployment.</div>
+      <div class="lim"><strong>Fairness:</strong> Model trained on NYC data may underserve neighborhoods with fewer training trips.</div>
+      <div class="lim"><strong>Safety:</strong> P2P carpooling with strangers requires background checks and real-time ride tracking before launch.</div>
+      <div class="lim"><strong>Algorithmic bias:</strong> Higher fares make riders more attractive, which could disadvantage lower-income riders systematically.</div>
     </div>
   </div>
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 11 — Limitations + Conclusion
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 11: Limitations + Conclusion ══ -->
 <section>
-  <h2>What we built — and what comes next</h2>
-  <div class="row">
-    <div class="c50">
-      <p style="font-size:.63em; color:var(--teal); font-weight:bold; margin-bottom:.4rem;">3 Novel Contributions</p>
-      <div class="contrib">
-        <div class="cnum">1</div>
-        <div><strong>Synthetic P2P dataset</strong> from 3.5M real taxi trips, using corridor-aware GPS synthesis with polygon validation</div>
-      </div>
-      <div class="contrib">
-        <div class="cnum">2</div>
-        <div><strong>Dual-objective XGBoost</strong>: predicts both detour distance and acceptance probability, combined into one ranking score</div>
-      </div>
-      <div class="contrib">
-        <div class="cnum">3</div>
-        <div><strong>Learning-augmented matching</strong>: ML scores as edge weights in bipartite optimization, provably optimal (Bjorck et al., AAAI 2021)</div>
-      </div>
+  <h2>Contributions and limitations</h2>
+  <div class="cols">
+    <div class="w50">
+      <h3>Three novel contributions</h3>
+      <div class="contrib"><div class="cn">1</div><div><strong>Synthetic P2P training pipeline:</strong> corridor-aware GPS synthesis from 3.5M public taxi records with polygon validation and spherical projection</div></div>
+      <div class="contrib"><div class="cn">2</div><div><strong>Dual-objective XGBoost:</strong> regression (detour km) + classification (acceptance probability) fused into a single ranking score</div></div>
+      <div class="contrib"><div class="cn">3</div><div><strong>Learning-augmented bipartite matching:</strong> ML scores as edge weights, training on all feasible pairs, provably optimal assignment at inference (Bjorck et al., AAAI 2021)</div></div>
     </div>
-    <div class="c50">
-      <p style="font-size:.63em; color:var(--orange); font-weight:bold; margin-bottom:.4rem;">Honest Limitations</p>
-      <div class="warn-row">Labels are <strong>simulated</strong>, not real driver decisions</div>
-      <div class="warn-row">Straight-line distance ignores rivers, bridges, and one-ways</div>
-      <div class="warn-row">NYC only — suburban and rural generalization untested</div>
-      <div class="warn-row">Dev sample used — full production would run on 40K+ pairs</div>
-      <p style="font-size:.52em; color:#888; margin-top:.5rem; border-top:1px solid rgba(255,255,255,.1); padding-top:.35rem;">
-        <strong>Next:</strong> Real road routing (OSRM) · Employer subsidies · Cross-city validation (Chicago) · Live deployment data
+    <div class="w50">
+      <h3>Honest limitations</h3>
+      <div class="lim">Labels are simulated via behavioral model, not observed from real drivers</div>
+      <div class="lim">Geodesic (straight-line) distance used. Road-network routing via OSRM [4] would be more accurate, especially near rivers and bridges.</div>
+      <div class="lim">Trained and validated on NYC only. Feature abstraction (overlap_ratio is dimensionless) is designed to generalize, but cross-city empirical validation remains future work.</div>
+      <div class="lim">25% sample (38K pairs). Full dataset with 25K driver limit would yield ~300K pairs.</div>
+      <p style="font-size:.55em;color:var(--muted);margin-top:.5em;border-top:1px solid var(--border);padding-top:.35em;">
+        <strong>Future work:</strong> OSRM road routing [4] &middot; Employer subsidies as ML features &middot; Cross-city validation (Chicago) [9] &middot; Real deployment feedback loop
       </p>
     </div>
   </div>
@@ -564,27 +422,25 @@
 </section>
 
 
-<!-- ══════════════════════════════════════════
-     SLIDE 12 — References
-══════════════════════════════════════════ -->
+<!-- ══ SLIDE 12: References ══ -->
 <section>
   <h2>References</h2>
-  <div class="row">
-    <div class="c50">
-      <p class="ref-head">Ride-Sharing &amp; Matching</p>
-      <p class="ref">[1] Santi et al. (2014). Quantifying the Benefits of Vehicle Pooling with Shareability Networks. <em>PNAS</em>, 111(37).</p>
-      <p class="ref">[2] Bjorck et al. (2021). Learning Augmented Methods for Matching. <em>AAAI</em>, pp. 15520–15521.</p>
-      <p class="ref">[3] Anagnostopoulos &amp; Ramson (2025). A Vehicle Ride-Sharing Algorithm Assessing Passenger Satisfaction. <em>Future Transportation</em>, 5(2).</p>
-      <p class="ref">[4] Hsieh (2017). Car Pooling Based on Trajectories of Drivers. <em>IEEE AINA</em>, pp. 972–979.</p>
+  <div class="cols">
+    <div class="w50">
+      <p class="rh">Ride-Sharing and Matching</p>
+      <p class="ri">[1] Santi, P. et al. (2014). Quantifying the Benefits of Vehicle Pooling with Shareability Networks. <em>PNAS</em>, 111(37), 13290–13294.</p>
+      <p class="ri">[2] Bjorck, J. et al. (2021). Learning Augmented Methods for Matching. <em>AAAI</em>, pp. 15520–15521.</p>
+      <p class="ri">[3] Anagnostopoulos, T. &amp; Ramson, S.R.J. (2025). A Vehicle Ride-Sharing Algorithm Assessing Passenger Satisfaction. <em>Future Transportation</em>, 5(2).</p>
+      <p class="ri">[4] Hsieh, F. (2017). Car Pooling Based on Trajectories of Drivers. <em>IEEE AINA</em>, pp. 972–979.</p>
     </div>
-    <div class="c50">
-      <p class="ref-head">ML Methods &amp; Tools</p>
-      <p class="ref">[5] Chen &amp; Guestrin (2016). XGBoost: A Scalable Tree Boosting System. <em>KDD</em>, pp. 785–794.</p>
-      <p class="ref">[6] Grinsztajn et al. (2022). Why Tree-Based Models Still Outperform Deep Learning on Tabular Data. <em>NeurIPS</em>, 35.</p>
-      <p class="ref">[7] Omohundro (1989). Five Balltree Construction Algorithms. <em>ICSI Tech Report</em>.</p>
-      <p class="ref">[8] Pedregosa et al. (2011). Scikit-learn: Machine Learning in Python. <em>JMLR</em>, 12.</p>
-      <p class="ref-head" style="margin-top:.4rem;">Data</p>
-      <p class="ref">[9] Santos et al. (2011). Summary of Travel Trends: 2009 NHTS. <em>FHWA-PL-11-022</em>.</p>
+    <div class="w50">
+      <p class="rh">ML Methods and Tools</p>
+      <p class="ri">[5] Chen, T. &amp; Guestrin, C. (2016). XGBoost: A Scalable Tree Boosting System. <em>KDD</em>, pp. 785–794.</p>
+      <p class="ri">[6] Grinsztajn, L. et al. (2022). Why Tree-Based Models Still Outperform Deep Learning on Tabular Data. <em>NeurIPS</em>, 35, 507–520.</p>
+      <p class="ri">[7] Omohundro, S.M. (1989). Five Balltree Construction Algorithms. <em>ICSI Tech Report</em> TR-89-063.</p>
+      <p class="ri">[8] Pedregosa, F. et al. (2011). Scikit-learn: Machine Learning in Python. <em>JMLR</em>, 12, 2825–2830.</p>
+      <p class="rh" style="margin-top:.4em;">Data</p>
+      <p class="ri">[9] Santos, A. et al. (2011). Summary of Travel Trends: 2009 NHTS. <em>FHWA-PL-11-022</em>.</p>
     </div>
   </div>
 </section>
@@ -595,8 +451,8 @@
 <script>
   Reveal.initialize({
     hash: true, slideNumber: 'c/t',
-    transition: 'slide', transitionSpeed: 'fast',
-    controls: true, progress: true, center: false,
+    transition: 'none', controls: true,
+    progress: true, center: true,
     width: 1280, height: 720, margin: 0.06,
   });
 </script>
