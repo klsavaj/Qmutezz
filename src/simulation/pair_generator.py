@@ -151,7 +151,10 @@ class PairGenerator:
                 
                 if len(neighbor_indices) == 0:
                     continue
-                    
+
+                # shareability_count: how many riders are within search radius of this driver.
+                # High count = driver is in a dense corridor (Santi et al., PNAS 2014).
+                shareability_count = len(neighbor_indices)
                 potential_riders = batch_riders.iloc[neighbor_indices]
                 
                 for rider in potential_riders.itertuples():
@@ -213,6 +216,7 @@ class PairGenerator:
                             'fare_ratio': fare_ratio,
                             'pickup_hour': pickup_hour,
                             'pickup_dow': pickup_dow,
+                            'shareability_count': shareability_count,
                             'label': is_accepted
                         })
                 
@@ -267,6 +271,7 @@ class PairGenerator:
                 'fare_ratio': r_fare / max(d_fare, 1.0),
                 'pickup_hour': driver_time.hour,
                 'pickup_dow': driver_time.weekday(),
+                'shareability_count': 0,  # random pair, not from BallTree batch
                 'label': 0
             })
         

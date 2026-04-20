@@ -13,9 +13,15 @@ from sklearn.metrics import (
 
 class MultiObjectiveMatcher:
     """
-    Dual-objective XGBoost model for P2P ride matching.
-    Trains a regressor (detour prediction) and classifier (accept/reject)
-    on the same features, then combines their outputs into a match score.
+    Advanced Gradient Boosted Model (XGBoost) for Multi-Objective Matching.
+    
+    Why this class is the core of the Qmutez Application:
+    Peer-to-peer carpooling is not a single problem. You must predict how heavy the detour 
+    will physically be (Regression), and then calculate the psychological intent of 
+    whether the driver will accept that specific detour given the fare (Classification).
+    
+    XGBoost is utilized because tabular coordinate geometry heavily requires non-linear 
+    decision trees (which XGBoost calculates natively faster than deep learning models).
     """
     def __init__(self):
         # Sub-Model A: Predicts physical distance deviation
@@ -36,7 +42,7 @@ class MultiObjectiveMatcher:
         )
         
         # The exact parameter columns the tree utilizes to compute splits
-        self.features = ['driver_orig_dist', 'overlap_ratio', 'time_diff_mins', 'driver_approx_fare', 'rider_approx_fare', 'fare_ratio', 'pickup_hour', 'pickup_dow']
+        self.features = ['driver_orig_dist', 'overlap_ratio', 'time_diff_mins', 'driver_approx_fare', 'rider_approx_fare', 'fare_ratio', 'pickup_hour', 'pickup_dow', 'shareability_count']
         
     def prepare_data(self, df):
         X = df[self.features]
@@ -153,7 +159,7 @@ class MultiObjectiveMatcher:
         # Feature importance
         fig, ax = plt.subplots(figsize=(8, 5))
         xgb.plot_importance(self.classifier, ax=ax, importance_type='gain')
-        ax.set_title("Feature Importance (Classifier -Gain)")
+        ax.set_title("Feature Importance (Classifier — Gain)")
         fig.tight_layout()
         fig.savefig("figures/feature_importance.png", dpi=150)
         plt.close(fig)
@@ -166,7 +172,7 @@ class MultiObjectiveMatcher:
         ax.plot([0, 1], [0, 1], 'k--', label="Random")
         ax.set_xlabel("False Positive Rate")
         ax.set_ylabel("True Positive Rate")
-        ax.set_title("ROC Curve -Match Acceptance Classifier")
+        ax.set_title("ROC Curve — Match Acceptance Classifier")
         ax.legend()
         fig.tight_layout()
         fig.savefig("figures/roc_curve.png", dpi=150)
@@ -174,6 +180,8 @@ class MultiObjectiveMatcher:
         print("Saved figures/roc_curve.png")
 
         # --- Feature ablation study ---
+        # Remove each feature one at a time, retrain, measure accuracy drop.
+        # The bigger the drop, the more important the feature.
         print("\nRunning feature ablation study...")
         ablation_results = {}
         for feat in self.features:
@@ -199,14 +207,19 @@ class MultiObjectiveMatcher:
         ax.axvline(0, color='black', linewidth=0.8)
         fig.tight_layout()
         fig.savefig("figures/ablation_study.png", dpi=150)
-        plt.show()
         plt.close(fig)
         print("Saved figures/ablation_study.png")
 
         return X_test, yr_test, yc_test, pred_detour, pred_match
 
     def compute_match_score(self, feature_row):
-        """Combine detour prediction and acceptance probability into a single match score."""
+        """
+        Translates raw computational output into the single 'Ranking Score' string
+        used by the startup's matchmaking server queue.
+        
+        Logic: Combine predictions into a singular integer representation. Less detour 
+        increases ranking mathematically, while higher probability increases it logarithmically.
+        """
         # Formulate pandas DataFrame single entry safely
         df_feats = pd.DataFrame([feature_row], columns=self.features)
         
