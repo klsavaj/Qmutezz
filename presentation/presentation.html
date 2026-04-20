@@ -260,7 +260,12 @@
         <li>We used <strong>3.5 million NYC taxi trips</strong> from August 2025</li>
         <li>Randomly assigned half as "Drivers", half as "Riders"</li>
         <li>Simulated: <em>"Would these two people share a ride?"</em></li>
-        <li>Generated <strong>labeled training examples</strong> with realistic acceptance rules</li>
+        <li>Generated <strong>labeled training examples</strong> with realistic acceptance rules:
+          <ul>
+            <li>4-factor composite: detour severity (30%), fare ratio (25%), time gap (25%), trip length ratio (20%)</li>
+            <li>Plus Gumbel noise to simulate human irrationality</li>
+          </ul>
+        </li>
       </ul>
       <br>
       <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
