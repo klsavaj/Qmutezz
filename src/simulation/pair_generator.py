@@ -30,19 +30,31 @@ class PairGenerator:
         
     def filter_commuting_window(self):
         """
-        Isolates temporal commutes.
-        Why: We only care about P2P carpooling during high-volume directional flows 
-        (like Morning 7AM-10AM rushes).
+        Isolates commute windows. Supports multiple windows (AM + PM rush hours)
+        via the time_windows list in config, or falls back to a single time_window.
         """
-        start_hr = self.sim_config["time_window"]["start_hour"]
-        end_hr = self.sim_config["time_window"]["end_hour"]
-        
-        print(f"Filtering for commute window: {start_hr}:00 - {end_hr}:00")
-        
-        self.df = self.df[
-            (self.df['tpep_pickup_datetime'].dt.hour >= start_hr) & 
-            (self.df['tpep_pickup_datetime'].dt.hour < end_hr)
-        ]
+        windows = self.sim_config.get("time_windows")
+
+        if windows:
+            mask = pd.Series(False, index=self.df.index)
+            labels = []
+            for w in windows:
+                mask |= (
+                    (self.df['tpep_pickup_datetime'].dt.hour >= w['start_hour']) &
+                    (self.df['tpep_pickup_datetime'].dt.hour < w['end_hour'])
+                )
+                labels.append(f"{w['start_hour']}:00-{w['end_hour']}:00")
+            self.df = self.df[mask]
+            print(f"Filtering for commute windows: {' + '.join(labels)}")
+        else:
+            # backward compatibility: single time_window key
+            start_hr = self.sim_config["time_window"]["start_hour"]
+            end_hr   = self.sim_config["time_window"]["end_hour"]
+            print(f"Filtering for commute window: {start_hr}:00 - {end_hr}:00")
+            self.df = self.df[
+                (self.df['tpep_pickup_datetime'].dt.hour >= start_hr) &
+                (self.df['tpep_pickup_datetime'].dt.hour < end_hr)
+            ]
         
         # Apply deterministic downsampling so DEV environments don't cause MemoryErrors
         sample_ratio = self.sim_config.get("sample_ratio", 1.0)
