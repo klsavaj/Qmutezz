@@ -5,7 +5,7 @@ import xgboost as xgb
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV
+from sklearn.model_selection import train_test_split, cross_val_score, GridSearchCV, learning_curve
 from sklearn.metrics import (
     mean_absolute_error, mean_squared_error, accuracy_score,
     classification_report, f1_score, roc_auc_score, roc_curve
@@ -209,6 +209,40 @@ class MultiObjectiveMatcher:
         fig.savefig("figures/ablation_study.png", dpi=150)
         plt.close(fig)
         print("Saved figures/ablation_study.png")
+
+        # --- Learning curves ---
+        # Diagnoses overfitting vs underfitting by plotting train/CV accuracy
+        # across increasing training set sizes.
+        print("\nGenerating learning curves...")
+        lc_clf = xgb.XGBClassifier(
+            objective='binary:logistic', eval_metric='logloss',
+            scale_pos_weight=scale_pos_weight, **best_params
+        )
+        train_sizes, train_scores, cv_scores = learning_curve(
+            lc_clf, X_train, yc_train, cv=5,
+            train_sizes=[0.1, 0.25, 0.5, 0.75, 1.0],
+            scoring='accuracy', n_jobs=-1
+        )
+        train_mean = train_scores.mean(axis=1)
+        train_std  = train_scores.std(axis=1)
+        cv_mean    = cv_scores.mean(axis=1)
+        cv_std     = cv_scores.std(axis=1)
+
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.plot(train_sizes, train_mean, 'o-', color='steelblue', label='Training accuracy')
+        ax.fill_between(train_sizes, train_mean - train_std, train_mean + train_std,
+                        alpha=0.15, color='steelblue')
+        ax.plot(train_sizes, cv_mean, 'o-', color='darkorange', label='CV accuracy (5-fold)')
+        ax.fill_between(train_sizes, cv_mean - cv_std, cv_mean + cv_std,
+                        alpha=0.15, color='darkorange')
+        ax.set_xlabel('Training set size')
+        ax.set_ylabel('Accuracy')
+        ax.set_title('Learning Curves — XGBoost Classifier')
+        ax.legend()
+        fig.tight_layout()
+        fig.savefig("figures/learning_curve.png", dpi=150)
+        plt.close(fig)
+        print("Saved figures/learning_curve.png")
 
         return X_test, yr_test, yc_test, pred_detour, pred_match
 
