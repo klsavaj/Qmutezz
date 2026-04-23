@@ -110,7 +110,7 @@ class DataLoader:
             maxx = df['PULocationID'].map(lambda x: zone_dict.get(x, {}).get('maxx', base_lon)).fillna(base_lon)
             maxy = df['PULocationID'].map(lambda x: zone_dict.get(x, {}).get('maxy', base_lat)).fillna(base_lat)
             
-            # Academic Realism: Apply Zonal Bounding Box Distribution so pickups are scattered uniformly across their true geographic zone
+            # Apply Zonal Bounding Box Distribution so pickups are scattered uniformly across their true geographic zone
             np.random.seed(42)
             df['pickup_longitude'] = np.random.uniform(minx, maxx)
             df['pickup_latitude'] = np.random.uniform(miny, maxy)

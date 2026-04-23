@@ -162,26 +162,52 @@
 <!-- ══ SLIDE 3: Data ══ -->
 <section>
   <h2>No P2P carpooling dataset exists, so we built one</h2>
+  <ul>
+    <li><strong>Source:</strong> NYC TLC Yellow Taxi, 3.5M trips, August 2025. Used 25% sample = ~268,000 commute-window trips.</li>
+    <li><strong>Problem:</strong> TLC removed GPS coordinates in 2016 (privacy). Only zone IDs remain — coordinate synthesis required (next slide).</li>
+    <li><strong>Time windows:</strong> AM 7–10 and PM 4–7. These are the only windows where commuter carpooling is realistic.</li>
+    <li><strong>Simulation:</strong> 50% of trips randomly assigned as Drivers, 50% as Riders. For each nearby pair, compute features and assign an acceptance label.</li>
+    <li><strong>Label policy:</strong> 4-factor composite + Gumbel noise to simulate human irrationality:
+      <ul>
+        <li>detour severity (30%) + fare ratio (25%) + time gap (25%) + trip ratio (20%)</li>
+        <li>label = 1 if composite + Gumbel noise &gt; 0.45, else 0</li>
+      </ul>
+    </li>
+    <li><strong>Train/test split:</strong> driver-level 80/20 — all pairs for a given driver stay in one partition, preventing entity leakage</li>
+  </ul>
+</section>
+
+
+<!-- ══ SLIDE 4: Data Distribution ══ -->
+<section>
+  <h2>What the 38,102 training pairs look like</h2>
   <div class="cols">
     <div class="w55">
-      <ul>
-        <li><strong>Source:</strong> NYC TLC Yellow Taxi, 3.5M trips, August 2025</li>
-        <li><strong>Problem:</strong> TLC removed GPS coordinates in 2016 (privacy). Only zone IDs remain.</li>
-        <li><strong>Approach:</strong> Randomly assign 50% of commute-window trips as Drivers, 50% as Riders. Simulate whether each pair would share a ride.</li>
-        <li><strong>Output:</strong> 38,102 labeled pairs (AM 7–10 + PM 4–7, 25% sample)</li>
-        <li><strong>Label policy:</strong> 4-factor composite score + Gumbel noise:<br>
-          <small style="color:var(--muted)">detour severity (30%), fare ratio (25%), time gap (25%), trip ratio (20%)</small></li>
-      </ul>
+      <img class="fig light" src="feature_distributions.png" alt="Feature distributions">
+      <p class="cap">Feature distributions by acceptance label. Green = accepted, pink = rejected.</p>
     </div>
     <div class="w45">
-      <img class="fig light" src="feature_distributions.png" alt="Feature distributions">
-      <p class="cap">Accepted pairs (green) cluster at lower detour and higher overlap ratio, confirming realistic label patterns</p>
+      <h3>Dataset summary</h3>
+      <table>
+        <tr><th>Split</th><th>Pairs</th><th>Share</th></tr>
+        <tr><td>Accepted (label = 1)</td><td>16,623</td><td>43.6%</td></tr>
+        <tr><td>Rejected (label = 0)</td><td>21,479</td><td>56.4%</td></tr>
+        <tr class="best"><td>Total</td><td>38,102</td><td>100%</td></tr>
+      </table>
+      <h3>Key patterns</h3>
+      <ul>
+        <li><strong>Detour:</strong> accepted pairs cluster 0–5 km; rejected spread to 80 km (genuine negatives beyond threshold)</li>
+        <li><strong>Overlap ratio:</strong> accepted near 0.8–1.0; rejected near 0.0–0.2</li>
+        <li><strong>Time diff:</strong> rejected spike at 15-min cutoff; accepted cluster near 0–5 min</li>
+        <li><strong>Fares:</strong> distributions overlap — fare <em>ratio</em> is more informative than raw fare alone</li>
+      </ul>
+      <div class="note" style="font-size:.52em;">Near-balanced classes (44%/56%). XGBoost scale_pos_weight = 1.28 handles the minor imbalance.</div>
     </div>
   </div>
 </section>
 
 
-<!-- ══ SLIDE 4: Coordinate Synthesis ══ -->
+<!-- ══ SLIDE 5: Coordinate Synthesis ══ -->
 <section>
   <h2>How we synthesize exact GPS coordinates from zone IDs</h2>
   <div class="cols">
@@ -232,7 +258,7 @@
 </section>
 
 
-<!-- ══ SLIDE 5: Model Architecture ══ -->
+<!-- ══ SLIDE 6: Model Architecture ══ -->
 <section>
   <h2>Dual-objective XGBoost + bipartite matching</h2>
   <div class="cols">
@@ -273,11 +299,12 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 6: Results ══ -->
+<!-- ══ SLIDE 7: Results ══ -->
 <section>
   <h2>XGBoost produces better rankings, not just higher accuracy</h2>
   <div class="cols">
     <div class="w55">
+      <p style="font-size:.5em;color:var(--muted);margin-bottom:.3em;">Held-out test set: 7,677 pairs from 3,969 unseen drivers (driver-level 80/20 split)</p>
       <table>
         <tr><th>Model</th><th>Accuracy</th><th>F1</th><th>ROC-AUC</th></tr>
         <tr><td>Rule-Based (distance cutoff)</td><td>93.3%</td><td>92.9%</td><td>n/a</td></tr>
@@ -301,7 +328,7 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 7: Feature Importance ══ -->
+<!-- ══ SLIDE 8: Feature Importance ══ -->
 <section>
   <h2>What the model actually learns to look at</h2>
   <div class="cols">
@@ -324,7 +351,7 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 8: Diagnostics ══ -->
+<!-- ══ SLIDE 9: Diagnostics ══ -->
 <section>
   <h2>Model validation: generalization and honest evaluation</h2>
   <div class="cols">
@@ -347,7 +374,7 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 9: System Results ══ -->
+<!-- ══ SLIDE 10: System Results ══ -->
 <section>
   <h2>Simulated system-level impact after bipartite matching</h2>
   <div class="cols">
@@ -374,7 +401,7 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 10: Discussion + Ethics ══ -->
+<!-- ══ SLIDE 11: Discussion + Ethics ══ -->
 <section>
   <h2>Interpreting the results and ethical considerations</h2>
   <div class="cols">
@@ -397,7 +424,7 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 11: Limitations + Conclusion ══ -->
+<!-- ══ SLIDE 12: Limitations + Conclusion ══ -->
 <section>
   <h2>Contributions and limitations</h2>
   <div class="cols">
@@ -422,7 +449,7 @@ s.t. Σ<sub>j</sub> x<sub>ij</sub> ≤ 1 &nbsp;(each driver matched once)<br>
 </section>
 
 
-<!-- ══ SLIDE 12: References ══ -->
+<!-- ══ SLIDE 13: References ══ -->
 <section>
   <h2>References</h2>
   <div class="cols">

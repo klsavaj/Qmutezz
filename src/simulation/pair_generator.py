@@ -15,7 +15,7 @@ class PairGenerator:
     to train our XGBoost models on acceptable vs unacceptable geographic detours.
     """
     def __init__(self, processed_data_path, config_path="config/dev_config.yaml"):
-        # Utilizing YAML parameters ensures our ML simulator is highly reproducible
+        # Utilizing YAML parameters 
         with open(config_path, "r") as file:
             self.config = yaml.safe_load(file)
             
@@ -56,7 +56,7 @@ class PairGenerator:
                 (self.df['tpep_pickup_datetime'].dt.hour < end_hr)
             ]
         
-        # Apply deterministic downsampling so DEV environments don't cause MemoryErrors
+        # Apply deterministic downsampling 
         sample_ratio = self.sim_config.get("sample_ratio", 1.0)
         if sample_ratio < 1.0:
             print(f"Downsampling to {sample_ratio*100}% for development.")
@@ -185,17 +185,17 @@ class PairGenerator:
                         # Models acceptance as a composite of independent behavioral
                         # factors the ML model must learn to combine.
                         
-                        # Factor 1: Fare profitability — is the rider's fare worth the detour?
+                        # Factor 1: Fare profitability, is the rider's fare worth the detour?
                         fare_ratio = rider.fare_amount / max(driver.fare_amount, 1.0)
                         fare_score = min(fare_ratio, 1.5) / 1.5  # Normalize to [0, 1]
                         
-                        # Factor 2: Temporal inconvenience — how disruptive is the timing?
+                        # Factor 2: Temporal inconvenience, how disruptive is the timing?
                         time_score = max(0, 1.0 - (diff_mins / 15.0))  # 0 at 15min, 1 at 0min
                         
-                        # Factor 3: Trip length ratio — short detour on long trip = acceptable
+                        # Factor 3: Trip length ratio, short detour on long trip = acceptable
                         trip_ratio = d_orig_dist / max(d_orig_dist + detour, 0.1)
                         
-                        # Factor 4: Detour severity — normalized by threshold
+                        # Factor 4: Detour severity, normalized by threshold
                         detour_score = 1.0 - (detour / max_detour_km)
                         
                         # Composite acceptance probability with weighted factors
@@ -238,8 +238,6 @@ class PairGenerator:
                 print(f"Processed {d_count} drivers across batches. Current feasible pairs: {len(final_pairs)}")
 
         # Generate negative labels: real pairs that genuinely fail the matching criteria
-        # We compute ALL features honestly — no hardcoded fakes — so the model learns
-        # real rejection patterns instead of trivial shortcuts.
         print("Generating negative labels from genuinely infeasible pairs...")
         rng = np.random.RandomState(42)
         negative_pairs = []
@@ -263,7 +261,7 @@ class PairGenerator:
             if detour <= max_detour_km:
                 continue
             
-            # Compute REAL features — no fakes
+            # Compute REAL features
             overlap_ratio = compute_spatial_overlap(detour, d_orig_dist)
             driver_time = self.drivers_df.loc[d_idx, 'tpep_pickup_datetime']
             rider_time = self.riders_df.loc[r_idx, 'tpep_pickup_datetime']
