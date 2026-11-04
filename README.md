@@ -5,6 +5,16 @@
 
 **Author:** Krunal Savaj (solo project)
 
+## What This Project Is About
+
+Picture someone driving to work every morning while a person a few blocks away is heading the same way. This project tries to answer one question: **which rider should each driver pick up?**
+
+A good match has to work for both people. The driver shouldn't go far out of their way, the ride should pay enough to be worth it, and the timing has to line up. Simple distance or time cut-offs can't balance all of that at once.
+
+There's no public carpooling dataset, so I built one. Starting from 3.5 million real NYC Yellow Taxi trips (August 2025), I generated realistic driver–rider pairs and simulated whether each driver would accept. I then trained an XGBoost model that predicts two things for every possible pair: how much extra driving it adds, and how likely the driver is to say yes. Those two predictions become one score, and a bipartite matching step uses the scores to pair everyone up at once, so the overall assignment is as good as possible instead of first come, first served.
+
+In the end the model beats both a rule-based approach and logistic regression, matches almost every rider, and earns drivers about $5.75 more per shared ride. The numbers are in [Key Results](#key-results) below.
+
 ## Quick Links
 
 - **Report:** `report/main.tex` (ICML 2026 format)
